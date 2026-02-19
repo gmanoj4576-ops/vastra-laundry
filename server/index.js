@@ -13,6 +13,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+console.log('🚀 SERVER STARTING - VERSION 2.0 (Buffering Disabled)');
+
+// Health Check
+app.get('/', (req, res) => res.send('API Running - V2.0'));
+
 // MongoDB Connection Strategy for Serverless
 let cached = global.mongoose;
 
