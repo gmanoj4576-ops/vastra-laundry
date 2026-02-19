@@ -1,0 +1,34 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bubbles -->
+  <circle cx="150" cy="100" r="15" fill="#60A5FA" opacity="0.6"/>
+  <circle cx="120" cy="140" r="10" fill="#60A5FA" opacity="0.4"/>
+  <circle cx="180" cy="80" r="8" fill="#60A5FA" opacity="0.5"/>
+  
+  <!-- Hanger -->
+  <path d="M256 60C256 60 270 60 270 80C270 100 256 100 256 100V130L380 190L370 210L256 150L142 210L132 190L256 130V100" stroke="#0052cc" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- T-Shirt -->
+  <path d="M170 195 L200 180 L256 200 L312 180 L342 195 V280 C342 280 256 300 170 280 V195 Z" fill="#F97316"/> <!-- Orange Shirt -->
+  <path d="M170 195 L150 220 L170 230 L190 205" fill="#F97316"/> <!-- Left Sleeve -->
+  <path d="M342 195 L362 220 L342 230 L322 205" fill="#F97316"/> <!-- Right Sleeve -->
+  <path d="M200 180 Q256 210 312 180" stroke="white" stroke-width="5" fill="none"/> <!-- Neck -->
+
+  <!-- Water Waves (Masking bottom of shirt) -->
+  <path d="M100 280 C150 260 200 320 256 300 C310 280 360 340 412 300 V400 C360 440 310 380 256 400 C200 420 150 360 100 400 V280 Z" fill="url(#waveGradient)"/>
+  <path d="M100 310 C150 290 200 350 256 330 C310 310 360 370 412 330 V420 C360 460 310 400 256 420 C200 440 150 380 100 420 V310 Z" fill="url(#waveGradient2)" opacity="0.7"/>
+
+  <!-- Text -->
+  <text x="256" y="460" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="64" fill="#003399">VASTRA</text>
+  <text x="256" y="490" text-anchor="middle" font-family="sans-serif" font-weight="500" font-size="24" fill="#F97316" letter-spacing="2">LAUNDRY SERVICES</text>
+
+  <defs>
+    <linearGradient id="waveGradient" x1="256" y1="280" x2="256" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1E40AF"/>
+    </linearGradient>
+    <linearGradient id="waveGradient2" x1="256" y1="310" x2="256" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+</svg>
