@@ -36,6 +36,7 @@ const app = {
                 } else {
                     // Use mobile or email
                     const identifier = this.state.user.mobile || this.state.user.email;
+                    console.log('Fetching orders for:', identifier); // Debug
                     this.state.orders = await api.getUserOrders(identifier);
                 }
             } catch (err) {
@@ -393,11 +394,21 @@ const app = {
             addMoneyBtn.onclick = () => {
                 const amount = prompt('Enter amount to add:', '50');
                 if (amount && !isNaN(amount)) {
-                    const ext = initializeUserData(this.state.user);
-                    ext.walletBalance += parseFloat(amount);
-                    updateUserData(this.state.user.email, ext);
-                    this.render();
-                    alert(`Successfully added $${amount} to wallet!`);
+                    // Mock Payment Flow as requested
+                    const card = prompt('Enter Card Number (Mock):', '1234-5678-9012-3456');
+                    if (card) {
+                        const expiry = prompt('Enter Expiry (MM/YY):', '12/28');
+                        if (expiry) {
+                            const cvv = prompt('Enter CVV:', '123');
+                            if (cvv) {
+                                const ext = initializeUserData(this.state.user);
+                                ext.walletBalance += parseFloat(amount);
+                                updateUserData(this.state.user.email, ext);
+                                this.render();
+                                alert(`Payment Successful! Added ₹${amount} to wallet.`);
+                            }
+                        }
+                    }
                 }
             };
         }

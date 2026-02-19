@@ -117,7 +117,7 @@ export function setupCheckoutEvents(cart, total, onSuccess) {
         }
 
         const orderData = {
-          userEmail: user.email || user.mobile,
+          userEmail: user.mobile || user.email,
           items: cart.map(item => ({
             itemName: item.itemName || item.name,
             serviceName: item.serviceName || item.service,

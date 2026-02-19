@@ -1,6 +1,6 @@
 export const services = [
   { id: 'washing', name: 'Standard Wash', icon: '🧺', desc: 'Expert clean for your clothes', price: '$2/item' },
-  { id: 'ironing', name: 'Ironing', icon: '💨', desc: 'Perfect steam iron finish', price: '$1.5/item' },
+  { id: 'ironing', name: 'Iron', icon: '💨', desc: 'Perfect steam iron finish', price: '$1.5/item' },
   { id: 'dryclean', name: 'Dry Cleaning', icon: '🧥', desc: 'Special care for delicate wear', price: '$5/item' },
   { id: 'women', name: 'Women Special', icon: '👗', desc: 'Hand care for sarees & heavy suits', price: '$6/item' },
   { id: 'kids', name: 'Kids Wear', icon: '🧸', desc: 'Gentle, hypoallergenic wash', price: '$1/item' },
