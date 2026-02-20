@@ -24,7 +24,7 @@ export function renderProfile(user, orders, onLogout) {
                 <p style="opacity: 0.8; font-size: 0.9rem;">Vastra Wallet Balance</p>
                 <h2 style="font-size: 2rem; font-weight: 700;">$${ext.walletBalance.toFixed(2)}</h2>
             </div>
-            <button id="add-money-btn" class="auth-btn" style="width: auto; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 0;">+ Add Money</button>
+            <button id="add-money-btn" class="auth-btn" style="width: auto; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 0; backdrop-filter: blur(10px);">+ Add Money</button>
         </div>
       </div>
 
@@ -32,7 +32,7 @@ export function renderProfile(user, orders, onLogout) {
       <div class="profile-section glass-card" style="margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h3>Saved Addresses</h3>
-            <button id="add-address-btn" style="color: #3b82f6; background: none; font-weight: 600; cursor: pointer; border: none;">+ Add New</button>
+            <button id="add-address-btn" class="text-btn" style="margin: 0; padding: 0.25rem 0.75rem;">+ Add New</button>
         </div>
         ${ext.savedAddresses.map(addr => `
             <div style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05);">
@@ -51,7 +51,7 @@ export function renderProfile(user, orders, onLogout) {
         <p style="color: #065f46; font-size: 0.9rem; margin-bottom: 1rem;">Invite a friend and you both get <strong>$10 in Vastra Wallet</strong>.</p>
         <div style="display: flex; gap: 0.5rem;">
             <input type="text" value="VASTRA-MAHA-2026" readonly style="background: white; border: 1px dashed #059669; color: #059669; font-weight: 700; text-align: center; border-radius: 8px;">
-            <button id="copy-referral-btn" class="auth-btn" style="width: auto; background: #059669; margin-top: 0;">Copy</button>
+            <button id="copy-referral-btn" class="auth-btn" style="width: auto; background: linear-gradient(135deg, #059669, #10b981); margin-top: 0; padding: 0.5rem 1.5rem;">Copy</button>
         </div>
       </div>
 
@@ -70,8 +70,8 @@ export function renderProfile(user, orders, onLogout) {
                 <div style="text-align: right;">
                   <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #dcfce7; color: #166534; margin-bottom: 0.5rem;">${order.status}</span>
                   <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                     <button class="invoice-btn" onclick="alert('Downloading invoice...')" style="font-size: 0.7rem; color: #3b82f6; border: 1px solid #3b82f6; padding: 0.2rem 0.8rem; border-radius: 9999px; background: transparent;">Invoice</button>
-                     <button class="reorder-btn" data-id="${order.id}" style="font-size: 0.7rem; color: #6366f1; border: 1px solid #6366f1; padding: 0.2rem 0.8rem; border-radius: 9999px; background: transparent;">Buy Again</button>
+                     <button class="invoice-btn text-btn" onclick="alert('Downloading invoice...')" style="font-size: 0.75rem; border: 1px solid currentColor; margin: 0; padding: 0.3rem 1rem;">Invoice</button>
+                     <button class="reorder-btn text-btn" data-id="${order.id}" style="font-size: 0.75rem; color: #6366f1; border: 1px solid currentColor; margin: 0; padding: 0.3rem 1rem;">Buy Again</button>
                   </div>
                 </div>
               </div>
@@ -81,10 +81,10 @@ export function renderProfile(user, orders, onLogout) {
       </div>
 
       <div style="margin-top: 2rem;">
-        <button id="logout-btn-real" class="auth-btn" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca;">Logout</button>
+        <button id="logout-btn-real" class="auth-btn" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; font-weight: 700;">Logout</button>
       </div>
        <!-- Floating Help Chat -->
-      <button class="fab-chat" onclick="alert('Chat with Support Connected! 🎧')" style="position: fixed; bottom: 2rem; right: 2rem; width: 60px; height: 60px; border-radius: 50%; background: #3b82f6; color: white; border: none; font-size: 1.5rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;">
+      <button class="fab-chat" onclick="alert('Chat with Support Connected! 🎧')" style="position: fixed; bottom: 2rem; right: 2rem; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)'" onmouseout="this.style.transform='scale(1) translateY(0)'">
         💬
       </button>
     </div>

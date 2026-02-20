@@ -70,7 +70,7 @@ export function renderCheckout(cart, total) {
            <small>To Pay</small>
            <strong>₹${total}</strong>
          </div>
-         <button id="place-order-btn" class="primary-btn pulse-btn">
+         <button id="place-order-btn" class="auth-btn" style="margin-top: 0; width: auto; padding: 0.8rem 2rem;">
            Place Order <i class="fas fa-chevron-right"></i>
          </button>
       </div>
@@ -86,7 +86,7 @@ export function renderSuccess() {
         </div>
         <h2 style="margin-bottom: 0.5rem; color: #1e293b;">Order Placed Successfully!</h2>
         <p style="color: #64748b; margin-bottom: 2rem;">Your clothes are in good hands.</p>
-        <button id="success-home-btn" class="primary-btn">Back to Home</button>
+        <button id="success-home-btn" class="auth-btn" style="width: auto; padding: 0.8rem 2rem;">Back to Home</button>
     </div>
   `;
 }

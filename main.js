@@ -55,18 +55,13 @@ const app = {
             return;
         }
 
-        // Role-based main shell
-        container.innerHTML = renderAdminPanel(this.state.user, this.state.orders);
-        if (this.state.user.role === 'admin') {
-            container.innerHTML = renderAdminPanel(this.state.user, this.state.orders);
-        } else {
-            container.innerHTML = `
+        // Customer main shell
+        container.innerHTML = `
         ${renderHeader(this.state.user, (view) => this.navigateTo(view), this.state.cart.length)}
         <div id="main-content">
           ${this.renderActiveView()}
         </div>
       `;
-        }
 
         this.attachEvents();
     },
@@ -332,17 +327,24 @@ const app = {
 
         const confirmOrderBtn = document.getElementById('confirm-order-btn');
         if (confirmOrderBtn) {
-            confirmOrderBtn.onclick = () => {
+            confirmOrderBtn.onclick = async () => {
                 const order = {
-                    id: 'ORD-' + Math.floor(Math.random() * 10000),
+                    userEmail: this.state.user.email || this.state.user.mobile, // Backend needs identifier
                     items: [...this.state.cart],
+                    totalAmount: this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + 2, // Basic total + delivery fee
                     date: new Date().toLocaleDateString(),
-                    status: 'Order Received'
+                    status: 'Pending'
                 };
-                this.state.orders.push(order);
-                this.saveOrders();
-                this.state.cart = [];
-                this.navigateTo('success');
+
+                try {
+                    const savedOrder = await api.createOrder(order);
+                    this.state.orders.push(savedOrder);
+                    this.state.cart = [];
+                    this.navigateTo('success');
+                } catch (error) {
+                    alert('Failed to place order. Please try again.');
+                    console.error(error);
+                }
             };
         }
 

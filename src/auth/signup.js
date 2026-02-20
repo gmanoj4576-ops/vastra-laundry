@@ -41,7 +41,8 @@ export function renderSignUp(onSwitch) {
         </form>
 
         <div class="auth-footer">
-          Already have an account? <a href="#" id="goto-signin">Sign In</a>
+          Already have an account? <a href="#" id="goto-signin">Sign In</a><br><br>
+          <a href="/admin/" style="font-size: 12px; color: var(--text-muted); text-decoration: none; opacity: 0.7; transition: all 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">⊞ Admin Portal</a>
         </div>
       </div>
     </div>

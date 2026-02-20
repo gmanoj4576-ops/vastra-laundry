@@ -1,18 +1,18 @@
 export function renderTracking(order) {
-    const steps = [
-        { label: 'Order Received', icon: '📝' },
-        { label: 'Washing', icon: '🧺' },
-        { label: 'Ironing', icon: '💨' },
-        { label: 'Ready for Pickup', icon: '🚚' },
-        { label: 'Completed', icon: '✅' }
-    ];
+  const steps = [
+    { label: 'Order Received', icon: '📝' },
+    { label: 'Washing', icon: '🧺' },
+    { label: 'Ironing', icon: '💨' },
+    { label: 'Ready for Pickup', icon: '🚚' },
+    { label: 'Completed', icon: '✅' }
+  ];
 
-    const currentStepIndex = steps.findIndex(s => s.label === order.status);
+  const currentStepIndex = steps.findIndex(s => s.label === order.status);
 
-    const content = `
+  const content = `
     <div class="page-content">
       <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-        <button id="back-home-track" class="icon-btn">
+        <button id="back-home-track" class="icon-btn" style="border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #f1f5f9; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='rotate(10deg) scale(1.1)'" onmouseout="this.style.transform='rotate(0deg) scale(1)'">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
         <h2>Track Order #${order.id}</h2>
@@ -45,5 +45,5 @@ export function renderTracking(order) {
     </div>
   `;
 
-    return content;
+  return content;
 }

@@ -6,7 +6,7 @@ const router = express.Router();
 // Signup (Mobile + Password)
 router.post('/signup', async (req, res) => {
     try {
-        const { name, mobile, password, email } = req.body;
+        const { name, mobile, password, email, role } = req.body;
 
         // Check if mobile already exists
         const existingUser = await User.findOne({ mobile });
@@ -19,7 +19,7 @@ router.post('/signup', async (req, res) => {
             mobile,
             password,
             email: email || undefined,
-            role: 'customer'
+            role: role || 'customer'
         });
 
         await newUser.save();
@@ -44,6 +44,26 @@ router.post('/signin', async (req, res) => {
         }
 
         res.json({ message: 'Login successful', user });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Fetch all partners (for Admin assignments)
+router.get('/partners', async (req, res) => {
+    try {
+        const partners = await User.find({ role: 'partner' }).select('-password');
+        res.json(partners);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Fetch all users (for Admin dashboard)
+router.get('/users', async (req, res) => {
+    try {
+        const users = await User.find().select('-password');
+        res.json(users);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
