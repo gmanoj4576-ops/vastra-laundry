@@ -62,11 +62,11 @@ export function renderHeader(user, onNavigate, cartCount) {
         <div style="padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; overflow-y: auto;">
             <a href="#" class="menu-link" data-view="home" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">🏠</span> Home</a>
             <a href="#" class="menu-link" data-view="profile" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">👤</span> My Profile</a>
-            <a href="#" class="menu-link" data-view="track" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">📦</span> My Orders</a>
+            <a href="#" class="menu-link" data-view="track" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">📦</span> Order History & Tracking</a>
             
             <div style="height: 1px; background: #f1f5f9; margin: 0.5rem 0;"></div>
             
-            <a href="#" id="menu-payment-btn" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">💳</span> Payment Details</a>
+            <a href="#" id="menu-payment-btn" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">💳</span> Payment History</a>
             <a href="#" id="menu-wallet-btn" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">👛</span> Vastra Wallet</a>
             <a href="#" id="menu-address-btn" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">📍</span> Saved Addresses</a>
             
@@ -81,8 +81,8 @@ export function renderHeader(user, onNavigate, cartCount) {
     </div>
 
     <style>
-        #menu-overlay.open { opacity: 1; pointer-events: all; }
-        #side-menu.open { left: 0; }
+        #menu-overlay.open { opacity: 1 !important; pointer-events: all !important; }
+        #side-menu.open { left: 0 !important; }
         .menu-link:hover, .menu-link-static:hover { background: #f8fafc; color: var(--primary); }
         .menu-link-static { padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem; cursor: pointer; }
     </style>

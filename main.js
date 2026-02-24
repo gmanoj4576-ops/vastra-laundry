@@ -85,8 +85,9 @@ const app = {
         <div id="main-content" style="padding-bottom: 80px;">
           ${this.renderActiveView()}
         </div>
-        ${this.state.view !== 'admin' ? renderBottomNav(this.state.view, this.state.cart.length) : ''}
+        ${!['admin', 'checkout'].includes(this.state.view) ? renderBottomNav(this.state.view, this.state.cart.length) : ''}
       `;
+
 
         this.attachEvents();
     },
