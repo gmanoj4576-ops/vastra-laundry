@@ -63,9 +63,9 @@ export function renderCheckout(cart, total) {
              </label>
           </div>
         </div>
-      </div>
+      </div> <!-- End checkout-content -->
 
-      <div class="checkout-footer glass-card">
+      <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); margin-top: 1rem;">
          <div class="total-display">
            <small>To Pay</small>
            <strong>₹${total}</strong>

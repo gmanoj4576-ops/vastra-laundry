@@ -14,7 +14,9 @@ export function renderHeader(user, onNavigate, cartCount) {
           <span style="font-family: 'Syne', sans-serif; font-weight: 800; color: var(--text-main); font-size: 1.25rem; letter-spacing: -0.5px;">Vastra</span>
       </div>
       <div class="header-right" style="display: flex; gap: 0.75rem; align-items: center;">
-        <!-- Loyalty points visible in header -->
+        <button id="wallet-btn" style="background: #f0fdf4; color: #16a34a; padding: 0.35rem 0.65rem; border-radius: 12px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid #bbf7d0; cursor: pointer;">
+          👛 ₹${ext.walletBalance || 0}
+        </button>
         <button id="coin-btn" style="background: #fffbeb; color: #b45309; padding: 0.35rem 0.65rem; border-radius: 12px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid #fef3c7; cursor: pointer;">
           🪙 ${ext.vastraCoins}
         </button>

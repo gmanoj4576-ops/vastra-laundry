@@ -489,73 +489,75 @@ const app = {
 
         // Add Money
         const addMoneyBtn = document.getElementById('add-money-btn');
-        if (addMoneyBtn) {
-            addMoneyBtn.onclick = () => {
-                const amount = prompt('Enter amount to add:', '50');
-                if (amount && !isNaN(amount)) {
-                    // Mock Payment Flow as requested
-                    const card = prompt('Enter Card Number (Mock):', '1234-5678-9012-3456');
-                    if (card) {
-                        const expiry = prompt('Enter Expiry (MM/YY):', '12/28');
-                        if (expiry) {
-                            const cvv = prompt('Enter CVV:', '123');
-                            if (cvv) {
-                                const ext = initializeUserData(this.state.user);
-                                ext.walletBalance += parseFloat(amount);
-                                updateUserData(this.state.user.email, ext);
-                                this.render();
-                                alert(`Payment Successful! Added ₹${amount} to wallet.`);
-                            }
+        const headerWalletBtn = document.getElementById('wallet-btn');
+
+        const handleAddMoney = () => {
+            const amount = prompt('Enter amount to add:', '50');
+            if (amount && !isNaN(amount)) {
+                // Mock Payment Flow as requested
+                const card = prompt('Enter Card Number (Mock):', '1234-5678-9012-3456');
+                if (card) {
+                    const expiry = prompt('Enter Expiry (MM/YY):', '12/28');
+                    if (expiry) {
+                        const cvv = prompt('Enter CVV:', '123');
+                        if (cvv) {
+                            const ext = initializeUserData(this.state.user);
+                            ext.walletBalance += parseFloat(amount);
+                            updateUserData(this.state.user.email, ext);
+                            this.render();
+                            alert(`Payment Successful! Added ₹${amount} to wallet.`);
                         }
                     }
                 }
             };
-        }
 
-        // Add Address
-        const addAddrBtn = document.getElementById('add-address-btn');
-        if (addAddrBtn) {
-            addAddrBtn.onclick = () => {
-                const type = prompt('Location Type (e.g. Gym, Parents):', 'Gym');
-                if (type) {
-                    const ext = initializeUserData(this.state.user);
-                    ext.savedAddresses.push({
-                        id: Date.now(),
-                        type: type,
-                        text: '123 New Place, Vastra City'
+            if (addMoneyBtn) addMoneyBtn.onclick = handleAddMoney;
+            if (headerWalletBtn) headerWalletBtn.onclick = handleAddMoney;
+
+            const addAddrBtn = document.getElementById('add-address-btn');
+            if (addAddrBtn) {
+                addAddrBtn.onclick = () => {
+                    const type = prompt('Location Type (e.g. Gym, Parents):', 'Gym');
+                    if (type) {
+                        const ext = initializeUserData(this.state.user);
+                        ext.savedAddresses.push({
+                            id: Date.now(),
+                            type: type,
+                            text: '123 New Place, Vastra City'
+                        });
+                        updateUserData(this.state.user.email, ext);
+                        this.render();
+                    }
+                };
+            }
+
+            // Copy Referral
+            const copyRefBtn = document.getElementById('copy-referral-btn');
+            if (copyRefBtn) {
+                copyRefBtn.onclick = () => {
+                    const code = 'VASTRA-MAHA-2026';
+                    navigator.clipboard.writeText(code).then(() => {
+                        copyRefBtn.innerText = 'Copied!';
+                        setTimeout(() => copyRefBtn.innerText = 'Copy', 2000);
                     });
-                    updateUserData(this.state.user.email, ext);
-                    this.render();
-                }
-            };
-        }
+                };
+            }
 
-        // Copy Referral
-        const copyRefBtn = document.getElementById('copy-referral-btn');
-        if (copyRefBtn) {
-            copyRefBtn.onclick = () => {
-                const code = 'VASTRA-MAHA-2026';
-                navigator.clipboard.writeText(code).then(() => {
-                    copyRefBtn.innerText = 'Copied!';
-                    setTimeout(() => copyRefBtn.innerText = 'Copy', 2000);
+            // Checkout Events
+            if (this.state.view === 'checkout') {
+                const total = this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                setupCheckoutEvents(this.state.cart, total, () => {
+                    this.state.cart = [];
+                    // Add temp order to local state for immediate feedback if needed, 
+                    // but re-init will fetch it.
+                    this.navigateTo('success');
                 });
-            };
-        }
+            }
 
-        // Checkout Events
-        if (this.state.view === 'checkout') {
-            const total = this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-            setupCheckoutEvents(this.state.cart, total, () => {
-                this.state.cart = [];
-                // Add temp order to local state for immediate feedback if needed, 
-                // but re-init will fetch it.
-                this.navigateTo('success');
-            });
-        }
-
-        // Success Events
-        if (this.state.view === 'success') {
-            setupCheckoutEvents(); // Reuse for back button
+            // Success Events
+            if (this.state.view === 'success') {
+                setupCheckoutEvents(); // Reuse for back button
+            }
         }
     },
 
@@ -567,6 +569,6 @@ const app = {
         localStorage.removeItem('vastra_user');
         window.location.reload();
     }
-}
+};
 
 app.init();
