@@ -58,8 +58,8 @@ export function renderCart(cartItems, onCheckout, onBack) {
           </div>
         </div>
 
-        <button id="checkout-btn" class="auth-btn" style="margin-top: 2rem; height: 60px; font-size: 1.1rem;">
-          Place Order
+        <button id="checkout-btn" class="auth-btn" style="margin-top: 2rem; height: 60px; font-size: 1.1rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);">
+          Place Order <span style="font-size: 1.2rem;">✨</span>
         </button>
       `}
     </div>

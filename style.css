@@ -1,33 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+
 :root {
-    /* Fabric-Wash Theme Palette - Updated for Premium Look */
-    --primary-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-    /* Stronger Blue-Indigo */
-    --primary-light: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 100%);
-    /* For backgrounds */
+    /* Premium Palette - Vibrant & Diverse */
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #eff6ff;
 
-    /* New Mesh Gradient Background */
-    --bg-mesh: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+    /* Service Category Themes - High Vibrancy */
+    --theme-wash: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    --theme-wash-text: #0369a1;
+    --theme-iron: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    --theme-iron-text: #b45309;
+    --theme-dry: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    --theme-dry-text: #6d28d9;
+    --theme-women: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+    --theme-women-text: #be185d;
+    --theme-kids: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    --theme-kids-text: #15803d;
+    --theme-premium: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    --theme-premium-text: #fbbf24;
+    --theme-industry: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+    --theme-industry-text: #475569;
 
-    --accent-teal: #2dd4bf;
-    --accent-blue: #3b82f6;
-    --bg-soft: #f8fafc;
-    --bg-white: #ffffff;
-    --text-main: #1e293b;
+    --bg-mesh: radial-gradient(at 0% 0%, hsla(210, 100%, 98%, 1) 0, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(220, 100%, 95%, 1) 0, transparent 50%);
+
+    --text-main: #0f172a;
     --text-muted: #64748b;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --radius-sm: 0.75rem;
-    --radius-md: 1.5rem;
-    --radius-lg: 2.25rem;
-    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.4);
 
-    /* Glassmorphism & V2 Effects */
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    /* Slightly more opaque for readability on mesh */
-    --glass-border: rgba(255, 255, 255, 0.5);
+    --radius-sm: 14px;
+    --radius-md: 24px;
+    --radius-lg: 36px;
+
+    --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+    --transition-premium: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hidden {
+    display: none !important;
 }
 
 /* Background Animated Blobs - Retained but softened */
@@ -84,15 +96,48 @@ body::after {
 }
 
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    /* Main Background Image / Gradient */
-    background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
-    /* Ideally replace with url('/bg-main.jpg') cover no-repeat fixed center */
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-mesh);
     color: var(--text-main);
-    line-height: 1.6;
+    line-height: 1.5;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    overflow-x: hidden;
+    /* Safeguard against extremely large accessibility font scales breaking UI */
+    font-size: clamp(14px, 1rem, 18px);
+}
+
+/* Ensure headings scale but do not overflow */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    line-height: 1.2;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Utility to clamp long text (e.g., service names) */
+.text-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Buttons shouldn't grow indefinitely in height */
+button {
+    max-height: 70px;
 }
 
 /* --- LOADING SCENE STYLES --- */
@@ -383,17 +428,34 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 1.5rem;
-    /* Reduced padding for smaller box */
-    background: rgba(255, 255, 255, 0.95);
+    padding: 0 1.25rem;
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    height: 60px;
-    /* Fixed small height */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    height: 72px;
+}
+
+#main-content {
+    padding-bottom: 90px;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
 }
 
 /* Notification Popup */
@@ -508,53 +570,130 @@ select:focus {
 }
 
 .service-card {
-    background: rgba(255, 255, 255, 0.85);
-    padding: 1rem;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
+    background: white;
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-premium);
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    transition: transform 0.3s, box-shadow 0.3s;
-    cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    /* 3D Effect */
-    transform-style: preserve-3d;
-    perspective: 1000px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
 }
 
-.service-card:hover {
-    transform: translateY(-5px) rotateX(2deg) rotateY(2deg);
-    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
-    background: white;
+.service-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    opacity: 0.15;
+    z-index: 0;
 }
 
 .service-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #e0f2fe, #dbeafe);
-    border-radius: 16px;
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-    box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    font-size: 2rem;
+    z-index: 1;
+    position: relative;
 }
 
 .service-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-main);
+    font-size: 1.2rem;
     font-weight: 700;
+    margin-bottom: 0.4rem;
+    z-index: 1;
 }
 
 .service-card p {
     font-size: 0.85rem;
     color: var(--text-muted);
     line-height: 1.4;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    z-index: 1;
+}
+
+/* Category Coloring */
+.service-card.washing {
+    background: var(--theme-wash);
+}
+
+.service-card.washing .service-icon {
+    background: white;
+    color: var(--theme-wash-text);
+}
+
+.service-card.ironing {
+    background: var(--theme-iron);
+}
+
+.service-card.ironing .service-icon {
+    background: white;
+    color: var(--theme-iron-text);
+}
+
+.service-card.dryclean {
+    background: var(--theme-dry);
+}
+
+.service-card.dryclean .service-icon {
+    background: white;
+    color: var(--theme-dry-text);
+}
+
+.service-card.women {
+    background: var(--theme-women);
+}
+
+.service-card.women .service-icon {
+    background: white;
+    color: var(--theme-women-text);
+}
+
+.service-card.kids {
+    background: var(--theme-kids);
+}
+
+.service-card.kids .service-icon {
+    background: white;
+    color: var(--theme-kids-text);
+}
+
+.service-card.premium {
+    background: var(--theme-premium);
+    color: white;
+}
+
+.service-card.premium .service-icon {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--theme-premium-text);
+}
+
+.service-card.premium p {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.service-card.premium h3 {
+    color: white;
+}
+
+.service-card.industry {
+    background: var(--theme-industry);
+}
+
+.service-card.industry .service-icon {
+    background: white;
+    color: var(--theme-industry-text);
 }
 
 .promo-banner {
@@ -592,15 +731,46 @@ select:focus {
     opacity: 0.9;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
     .services-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .service-card {
+        padding: 1rem;
+    }
+
+    .service-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.5rem;
+    }
+
+    .service-card h3 {
+        font-size: 1rem;
+    }
+
+    .service-card p {
+        font-size: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .services-grid {
+        grid-template-columns: 1fr;
     }
 
     .promo-banner {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .promo-text h3 {
+        font-size: 1.5rem;
     }
 }
 
@@ -861,10 +1031,14 @@ select:focus {
         border: 1px solid rgba(255, 255, 255, 0.5);
     }
 }
+
 /* Live Animated Background Overlay */
 .live-animated-bg {
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     z-index: -2;
     background: linear-gradient(120deg, #0f172a, #1e293b, #3b82f6, #8b5cf6);
     background-size: 400% 400%;
@@ -882,16 +1056,32 @@ select:focus {
 }
 
 @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 @keyframes pulseBg {
-    0% { transform: scale(1); opacity: 0.1; }
-    100% { transform: scale(1.05); opacity: 0.2; }
+    0% {
+        transform: scale(1);
+        opacity: 0.1;
+    }
+
+    100% {
+        transform: scale(1.05);
+        opacity: 0.2;
+    }
 }
 
 .auth-container {
-    background: transparent !important; /* Override mesh to use live bg */
+    background: transparent !important;
+    /* Override mesh to use live bg */
 }

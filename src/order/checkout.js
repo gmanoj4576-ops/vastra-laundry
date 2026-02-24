@@ -116,6 +116,25 @@ export function setupCheckoutEvents(cart, total, onSuccess) {
           return;
         }
 
+        // --- NEW LOGIC: Check Wallet Balance ---
+        const { getUserData, updateUserData } = await import('../data/mock-data.js');
+        const extData = getUserData(user.email);
+
+        // We will read the selected payment method. However, based on the prompt "money should be deducted from wallet",
+        // we enforce wallet check if Online/Wallet is intended, OR we assume all orders use the wallet for this feature.
+        // For demonstration, we assume "Pay Online" means "Use Vastra Wallet".
+        const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+
+        if (paymentMethod === 'online') {
+          if (extData.walletBalance < total) {
+            alert(`Insufficient wallet balance. Total is ₹${total}, but you have ₹${extData.walletBalance.toFixed(2)}. Please add money to your wallet.`);
+            placeOrderBtn.innerHTML = 'Place Order <i class="fas fa-chevron-right"></i>';
+            placeOrderBtn.disabled = false;
+            return;
+          }
+        }
+        // ----------------------------------------
+
         const orderData = {
           userEmail: user.mobile || user.email,
           items: cart.map(item => ({
@@ -130,6 +149,16 @@ export function setupCheckoutEvents(cart, total, onSuccess) {
         };
 
         await api.createOrder(orderData);
+
+        // --- NEW LOGIC: Deduct Balance ---
+        if (paymentMethod === 'online') {
+          extData.walletBalance -= total;
+          // Also award coins: 10 coins per 100 spent
+          const earnedCoins = Math.floor(total / 100) * 10;
+          extData.vastraCoins += earnedCoins;
+          updateUserData(user.email, extData);
+        }
+        // ---------------------------------
 
         // Clear Cart
         localStorage.removeItem('vastra_cart');

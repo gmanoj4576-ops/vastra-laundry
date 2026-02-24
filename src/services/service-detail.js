@@ -89,15 +89,15 @@ export function renderServiceDetail(serviceId, currentCart, onAddToCart, onBack)
   }
 
   const content = `
-    <div class="page-content">
-      <button id="back-to-home" class="icon-btn" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; width: auto; padding-right: 1rem; border-radius: 12px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Back to Services
+    <div class="page-content" style="max-width: 800px;">
+      <button id="back-to-home" class="icon-btn" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; width: auto; padding: 0.5rem 1rem; border-radius: 9999px; background: white; border: 1px solid #f1f5f9; box-shadow: var(--shadow-sm); color: var(--text-main);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
       </button>
       
-      <div class="service-detail-header">
-        <h2 style="font-size: 2rem; color: #1e293b;">${serviceName}</h2>
-        <p style="color: #64748b;">${isCustom ? 'Tailored to your needs.' : 'Expert care for your favorite garments.'}</p>
+      <div class="service-detail-header" style="margin-bottom: 2rem;">
+        <h2 style="font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem; letter-spacing: -1px;">${serviceName}</h2>
+        <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 500px;">${isCustom ? 'Tailored to your specific requirements.' : 'Expert care for your favorite garments.'}</p>
       </div>
 
       ${itemsHtml}

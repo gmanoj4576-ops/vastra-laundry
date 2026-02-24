@@ -1,32 +1,41 @@
-// Automatically works for Local (via Vite Proxy) and Vercel (via Rewrites)
-const API_URL = '/api';
+// Always use the live Vercel URL for API calls so local testing works without a local backend.
+const API_URL = 'https://vastra-green.vercel.app/api';
 
 export const api = {
     // Auth
     async signup(userData) {
-        // userData: { name, mobile, password, email? }
         const res = await fetch(`${API_URL}/auth/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Signup failed');
+        return data;
+    },
+
+    async sendOTP(email) {
+        const res = await fetch(`${API_URL}/auth/send-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         return data;
     },
 
-    async signup(userData) {
-        const res = await fetch(`${API_URL}/auth/signup`, {
+    async verifyOTP(email, otp) {
+        const res = await fetch(`${API_URL}/auth/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData)
+            body: JSON.stringify({ email, otp })
         });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message || 'Signup failed');
-        }
-        return res.json();
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
     },
+
 
     async signin(credentials) {
         // credentials: { mobile, password }
@@ -103,5 +112,17 @@ export const api = {
         const res = await fetch(`${API_URL}/auth/users`);
         if (!res.ok) throw new Error('Failed to fetch users');
         return res.json();
+    },
+
+    async socialLogin(userData) {
+        // userData: { name, email, avatar }
+        const res = await fetch(`${API_URL}/auth/social-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
     }
 };

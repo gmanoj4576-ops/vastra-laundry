@@ -1,14 +1,14 @@
 export function renderAdminPanel(user, orders) {
-  const totalRevenue = orders.reduce((acc, o) => acc + o.items.reduce((sum, i) => sum + (i.price * i.quantity), 0), 0);
-  const pendingOrders = orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled').length;
-  const completedOrders = orders.filter(o => o.status === 'Completed').length;
+    const totalRevenue = orders.reduce((acc, o) => acc + o.items.reduce((sum, i) => sum + (i.price * i.quantity), 0), 0);
+    const pendingOrders = orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled').length;
+    const completedOrders = orders.filter(o => o.status === 'Completed').length;
 
-  const content = `
+    const content = `
     <div class="admin-layout" style="display: flex; height: 100vh; background: #f1f5f9;">
       <!-- 1. Sidebar Navigation -->
       <aside style="width: 250px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column;">
         <div style="padding: 1.5rem; text-align: center; border-bottom: 1px solid #f1f5f9;">
-            <img src="/logo.svg" style="width: 40px; height: 40px; margin-bottom: 0.5rem;">
+            <img src="/logo.jpg" style="width: 40px; height: 40px; margin-bottom: 0.5rem;">
             <h3 style="margin: 0; color: #1e293b; font-family: 'Syne', sans-serif;">Vastra Admin</h3>
         </div>
         <nav style="flex: 1; padding: 1rem;">
@@ -182,5 +182,5 @@ export function renderAdminPanel(user, orders) {
     </style>
   `;
 
-  return content;
+    return content;
 }

@@ -2,6 +2,7 @@ import './style.css'
 import { renderSignIn } from './src/auth/signin.js'
 import { renderSignUp } from './src/auth/signup.js'
 import { renderHeader } from './src/components/header.js'
+import { renderBottomNav } from './src/components/bottom-nav.js'
 import { renderHome } from './src/home/home.js'
 import { renderServiceDetail } from './src/services/service-detail.js'
 import { renderCart } from './src/cart/cart.js'
@@ -9,6 +10,28 @@ import { renderCheckout, renderSuccess, setupCheckoutEvents } from './src/order/
 import { renderTracking } from './src/order/tracking.js'
 import { renderProfile } from './src/profile/profile.js'
 import { renderAdminPanel } from './src/dashboards/admin-panel.js'
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Registration Failed', err));
+    });
+}
+
+// Android Back Button Handling (Capacitor)
+import { App } from '@capacitor/app';
+if (window.Capacitor) {
+    App.addListener('backButton', () => {
+        // App object will handle the pop
+        if (app && typeof app.goBack === 'function') {
+            app.goBack();
+        } else {
+            App.exitApp();
+        }
+    });
+}
+
 import { api } from './src/api.js'
 
 import { initializeUserData, updateUserData } from './src/data/mock-data.js'
@@ -18,6 +41,7 @@ const app = {
         user: null,
         cart: [],
         view: 'home',
+        history: ['home'], // Initialize history array
         activeService: null,
         orders: JSON.parse(localStorage.getItem('vastra_orders')) || []
     },
@@ -58,9 +82,10 @@ const app = {
         // Customer main shell
         container.innerHTML = `
         ${renderHeader(this.state.user, (view) => this.navigateTo(view), this.state.cart.length)}
-        <div id="main-content">
+        <div id="main-content" style="padding-bottom: 80px;">
           ${this.renderActiveView()}
         </div>
+        ${this.state.view !== 'admin' ? renderBottomNav(this.state.view, this.state.cart.length) : ''}
       `;
 
         this.attachEvents();
@@ -97,10 +122,28 @@ const app = {
         }
     },
 
-    navigateTo(view, data = null) {
+    navigateTo(view, data = null, isBack = false) {
+        if (!isBack && this.state.view !== view) {
+            this.state.history.push(this.state.view);
+        }
         this.state.view = view;
         if (view === 'services') this.state.activeService = data;
         this.render();
+    },
+
+    goBack() {
+        if (this.state.history.length > 0) {
+            const previousView = this.state.history.pop();
+            this.navigateTo(previousView, null, true);
+        } else {
+            // If Android, exit. Otherwise, regular back.
+            if (window.Capacitor) {
+                const { App } = require('@capacitor/app');
+                App.exitApp();
+            } else {
+                window.history.back();
+            }
+        }
     },
 
     addToCart(itemName, price, quantity) {
@@ -133,6 +176,39 @@ const app = {
             };
         }
 
+        // Coin Modal Toggle
+        const coinBtn = document.getElementById('coin-btn');
+        if (coinBtn) {
+            coinBtn.onclick = () => {
+                const modal = document.getElementById('coin-modal');
+                const overlay = document.getElementById('coin-modal-overlay');
+                if (modal && overlay) {
+                    modal.style.opacity = '1';
+                    modal.style.pointerEvents = 'all';
+                    modal.style.transform = 'translate(-50%, -50%) scale(1)';
+                    overlay.style.opacity = '1';
+                    overlay.style.pointerEvents = 'all';
+                }
+            };
+        }
+
+        const closeCoinBtn = document.getElementById('close-coin-modal');
+        const coinOverlay = document.getElementById('coin-modal-overlay');
+        const closeCoinModal = () => {
+            const modal = document.getElementById('coin-modal');
+            const overlay = document.getElementById('coin-modal-overlay');
+            if (modal && overlay) {
+                modal.style.opacity = '0';
+                modal.style.pointerEvents = 'none';
+                modal.style.transform = 'translate(-50%, -50%) scale(0.9)';
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+            }
+        };
+
+        if (closeCoinBtn) closeCoinBtn.onclick = closeCoinModal;
+        if (coinOverlay) coinOverlay.onclick = closeCoinModal;
+
         const closeMenuBtn = document.getElementById('close-menu-btn');
         const menuOverlay = document.getElementById('menu-overlay');
         const closeMenu = () => {
@@ -155,7 +231,14 @@ const app = {
             }
         });
 
-        // Header events
+        // Bottom Nav Events
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.onclick = () => {
+                this.navigateTo(btn.dataset.view);
+            };
+        });
+
+        // Header and Side Menu Events
         const profileBtn = document.getElementById('profile-btn');
         if (profileBtn) profileBtn.onclick = () => this.navigateTo('profile');
 
@@ -164,6 +247,19 @@ const app = {
 
         const logo = document.getElementById('logo');
         if (logo) logo.onclick = () => this.navigateTo('home');
+
+        // Side Menu functional links
+        const payBtn = document.getElementById('menu-payment-btn');
+        if (payBtn) payBtn.onclick = () => { closeMenu(); alert("Payment Details Section"); };
+
+        const walletBtn = document.getElementById('menu-wallet-btn');
+        if (walletBtn) walletBtn.onclick = () => { closeMenu(); alert("Vastra Wallet Section"); };
+
+        const addrBtn = document.getElementById('menu-address-btn');
+        if (addrBtn) addrBtn.onclick = () => { closeMenu(); alert("Saved Addresses Section"); };
+
+        const logoutMenuBtn = document.getElementById('menu-logout-btn');
+        if (logoutMenuBtn) logoutMenuBtn.onclick = () => { closeMenu(); this.logout(); };
 
         // Notification Toggle
         const notifBtn = document.getElementById('notif-btn');
@@ -190,7 +286,7 @@ const app = {
 
         // Service Detail events
         const backBtn = document.getElementById('back-to-home');
-        if (backBtn) backBtn.onclick = () => this.navigateTo('home');
+        if (backBtn) backBtn.onclick = () => this.goBack();
 
         // Custom Request Submit
         const submitCustom = document.getElementById('submit-custom-req');
@@ -257,7 +353,7 @@ const app = {
 
         // Cart events
         const backCart = document.getElementById('back-home-cart');
-        if (backCart) backCart.onclick = () => this.navigateTo('home');
+        if (backCart) backCart.onclick = () => this.goBack();
 
         const startShop = document.getElementById('cart-start-shopping');
         if (startShop) startShop.onclick = () => this.navigateTo('home');
@@ -352,7 +448,7 @@ const app = {
         if (trackBtn) trackBtn.onclick = () => this.navigateTo('track');
 
         const backHomeTrack = document.getElementById('back-home-track');
-        if (backHomeTrack) backHomeTrack.onclick = () => this.navigateTo('home');
+        if (backHomeTrack) backHomeTrack.onclick = () => this.goBack();
 
         const trackHomeBtn = document.getElementById('track-home-btn');
         if (trackHomeBtn) trackHomeBtn.onclick = () => this.navigateTo('home');
