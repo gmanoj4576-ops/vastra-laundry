@@ -5,7 +5,7 @@ const UserSchema = new mongoose.Schema({
     mobile: { type: String, required: true, unique: true },
     email: { type: String, unique: true, sparse: true }, // Optional email
     password: { type: String }, // Optional password
-    role: { type: String, enum: ['customer', 'admin', 'partner'], default: 'customer' },
+    role: { type: String, enum: ['customer', 'admin', 'partner', 'logistics'], default: 'customer' },
     walletBalance: { type: Number, default: 0 },
     vastraCoins: { type: Number, default: 0 },
     savedAddresses: [{
@@ -17,8 +17,9 @@ const UserSchema = new mongoose.Schema({
         date: String,
         read: { type: Boolean, default: false }
     }],
-    dailyEarnings: { type: Number, default: 0 }, // For partners
-    partnerStatus: { type: String, enum: ['active', 'inactive'], default: 'active' }
+    dailyEarnings: { type: Number, default: 0 }, // For logistics/partners
+    partnerStatus: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    logisticsStatus: { type: String, enum: ['active', 'inactive'], default: 'active' }
 }, { timestamps: true });
 
 export default mongoose.model('User', UserSchema);

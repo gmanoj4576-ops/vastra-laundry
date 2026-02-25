@@ -56,7 +56,8 @@ router.post('/signup', async (req, res) => {
         const { name, mobile, password, email, role, otpVerified } = req.body;
 
         // Ensure email is verified if provided (logical check)
-        if (email && !otpVerified) {
+        // Only enforce OTP verification for regular customers
+        if (role === 'customer' && email && !otpVerified) {
             return res.status(400).json({ message: 'Email verification required' });
         }
 
@@ -116,10 +117,20 @@ router.post('/signin', async (req, res) => {
     }
 });
 
-// Fetch all partners (for Admin assignments)
+// Fetch all logistics agents (formerly partners)
+router.get('/logistics', async (req, res) => {
+    try {
+        const agents = await User.find({ role: { $in: ['logistics', 'partner'] } }).select('-password');
+        res.json(agents);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Backward compatibility for legacy partner route
 router.get('/partners', async (req, res) => {
     try {
-        const partners = await User.find({ role: 'partner' }).select('-password');
+        const partners = await User.find({ role: { $in: ['logistics', 'partner'] } }).select('-password');
         res.json(partners);
     } catch (err) {
         res.status(500).json({ message: err.message });
