@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import orderRoutes from './routes/orders.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.use(async (req, res, next) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Start Server (Only if not in Vercel/Production mode, or if running locally)
 if (process.env.NODE_ENV !== 'production') {

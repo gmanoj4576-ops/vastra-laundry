@@ -1,5 +1,7 @@
 // Always use the live Vercel URL for API calls so local testing works without a local backend.
+// Use local backend if running on localhost, otherwise use production URL
 const API_URL = 'https://vastra-green.vercel.app/api';
+
 
 export const api = {
     // Auth
@@ -96,15 +98,25 @@ export const api = {
         return res.json();
     },
 
-    async getPartnerOrders(partnerId) {
-        const res = await fetch(`${API_URL}/orders/partner/${partnerId}`);
-        if (!res.ok) throw new Error('Failed to fetch partner orders');
+    async updateLocation(orderId, lat, lng) {
+        const res = await fetch(`${API_URL}/orders/${orderId}/location`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat, lng })
+        });
+        if (!res.ok) throw new Error('Failed to update location');
+        return res.json();
+    },
+
+    async getPartnerOrders(agentId) {
+        const res = await fetch(`${API_URL}/orders/logistics/${agentId}`);
+        if (!res.ok) throw new Error('Failed to fetch logistics orders');
         return res.json();
     },
 
     async getAllPartners() {
-        const res = await fetch(`${API_URL}/auth/partners`);
-        if (!res.ok) throw new Error('Failed to fetch partners');
+        const res = await fetch(`${API_URL}/auth/logistics`);
+        if (!res.ok) throw new Error('Failed to fetch fleet agents');
         return res.json();
     },
 
@@ -114,10 +126,51 @@ export const api = {
         return res.json();
     },
 
+    async getOrderByTrackingId(trackingId) {
+        const res = await fetch(`${API_URL}/orders/tracking/${trackingId}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Tracking ID not found');
+        return data;
+    },
+
     async socialLogin(userData) {
         // userData: { name, email, avatar }
         const res = await fetch(`${API_URL}/auth/social-login`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
+    },
+
+    // God Mode Admin Routes
+    async adminRegisterUser(userData) {
+        const res = await fetch(`${API_URL}/admin/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
+    },
+
+    async adminUpdateWallet(userId, walletBalance) {
+        const res = await fetch(`${API_URL}/admin/users/${userId}/wallet`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletBalance })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
+    },
+
+    async adminUpdateUser(userId, userData) {
+        const res = await fetch(`${API_URL}/admin/users/${userId}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
         });
