@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 const OrderSchema = new mongoose.Schema({
-    userEmail: { type: String, required: true },
+    userEmail: { type: String }, // Optional instead of required
+    userMobile: { type: String, required: true }, // Ensure mobile is required as a baseline
     items: [{
         itemName: String,
         serviceName: String,
@@ -12,6 +13,7 @@ const OrderSchema = new mongoose.Schema({
         budget: String
     }],
     totalAmount: Number,
+    address: { type: String },
     partnerPayout: { type: Number, default: 0 }, // Amount to be paid to partner
     assignedPartner: { type: String, default: null }, // Legacy support
     deliveryAgent: { type: String, default: null }, // Current standard

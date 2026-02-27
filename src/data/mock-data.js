@@ -14,9 +14,16 @@ export const MOCK_DATA = {
         subscription: null // 'Pro' or null
     },
     fabricCareTips: [
-        { title: 'Silk Care', text: 'Always dry clean or hand wash in cold water.' },
-        { title: 'Denim Life', text: 'Wash inside out to preserve color.' },
-        { title: 'Woolen Warmth', text: 'Dry flat to prevent stretching.' }
+        { title: 'Silk Care', text: 'Always dry clean or hand wash in cold water with mild detergent. Avoid twisting or wringing.' },
+        { title: 'Denim Life', text: 'Wash inside out to preserve color and avoid frequent washing to maintain shape.' },
+        { title: 'Woolen Warmth', text: 'Use specific wool detergent. Dry flat on a towel to prevent stretching.' },
+        { title: 'Linen Love', text: 'Linen gets softer with each wash. Iron while slightly damp for best results.' },
+        { title: 'Stain Emergency', text: 'Blot, don\'t rub! Use cold water for biological stains like blood.' }
+    ],
+    proPackages: [
+        { id: 'monthly', name: 'Monthly Pro', price: 349, duration: '1 Month', features: ['Free Delivery < 10km', 'Priority Support', '10% Extra Vastra Coins'] },
+        { id: 'quarterly', name: 'Quarterly Pro', price: 899, duration: '3 Months', features: ['Free Delivery < 10km', 'Priority Support', '15% Extra Vastra Coins', '1 Free Express Wash'] },
+        { id: 'annual', name: 'Annual Pro', price: 2999, duration: '1 Year', features: ['Free Delivery < 10km', 'Priority Support', '25% Extra Vastra Coins', '4 Free Express Washes'] }
     ],
     promoCodes: {
         'WELCOME50': 0.50, // 50% off
@@ -33,9 +40,18 @@ export function initializeUserData(user) {
         data = null;
     }
 
-    // Deep merge or reset if missing keys (simple reset for now to ensure stability)
-    if (!data || !data.walletBalance || !data.vastraCoins) {
-        localStorage.setItem(key, JSON.stringify(MOCK_DATA.userExtensions));
+    // Ensure keys exist without overwriting 0 values
+    if (!data) {
+        data = { ...MOCK_DATA.userExtensions };
+        localStorage.setItem(key, JSON.stringify(data));
+    } else {
+        // Ensure all required fields exist
+        let changed = false;
+        if (data.walletBalance === undefined) { data.walletBalance = 150.00; changed = true; }
+        if (data.vastraCoins === undefined) { data.vastraCoins = 240; changed = true; }
+        if (!data.savedAddresses) { data.savedAddresses = []; changed = true; }
+        if (!data.notifications) { data.notifications = []; changed = true; }
+        if (changed) localStorage.setItem(key, JSON.stringify(data));
     }
     return JSON.parse(localStorage.getItem(key));
 }

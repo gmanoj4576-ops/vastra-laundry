@@ -1,12 +1,12 @@
 export function renderBottomNav(activeView, cartCount, unreadNotifCount = 0) {
-    const items = [
-        { id: 'home', label: 'Home', icon: '🏠' },
-        { id: 'track', label: 'Orders', icon: '📦' },
-        { id: 'notifications', label: 'Notifs', icon: '🔔' },
-        { id: 'cart', label: 'Cart', icon: '🛒' }
-    ];
+  const items = [
+    { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'track', label: 'Orders', icon: '📦' },
+    { id: 'notifications', label: 'notifis now', icon: '🔔' },
+    { id: 'cart', label: 'Cart', icon: '🛒' }
+  ];
 
-    return `
+  return `
     <nav class="bottom-nav">
       ${items.map(item => `
         <button class="nav-item ${activeView === item.id ? 'active' : ''}" data-view="${item.id}">

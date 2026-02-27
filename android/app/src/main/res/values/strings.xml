@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Vastra</string>
-    <string name="title_activity_main">Vastra</string>
-    <string name="package_name">com.vastra.laundry</string>
-    <string name="custom_url_scheme">com.vastra.laundry</string>
+    <string name="app_name">Vastra Laundry</string>
+    <string name="title_activity_main">Vastra Laundry</string>
+    <string name="package_name" translatable="false">com.vastra.laundry</string>
+    <string name="custom_url_scheme" translatable="false">com.vastra.laundry</string>
 </resources>

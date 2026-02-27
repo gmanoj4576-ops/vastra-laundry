@@ -2,6 +2,9 @@ import { api } from '../api.js';
 
 export function renderCheckout(cart, total) {
   if (!cart) cart = [];
+  const user = JSON.parse(localStorage.getItem('vastra_user'));
+  const ext = user ? (JSON.parse(localStorage.getItem(`vastra_ext_${user.email}`)) || { savedAddresses: [] }) : { savedAddresses: [] };
+
   return `
     <div class="checkout-container fade-in">
       <div class="checkout-header">
@@ -34,11 +37,28 @@ export function renderCheckout(cart, total) {
         <!-- Address Section -->
          <div class="address-section glass-card">
           <h3><i class="fas fa-map-marker-alt"></i> Pickup Address</h3>
-          <div class="current-address">
-            <p><strong>Home</strong></p>
-            <p>123, Vastra Lane, Fabric City, Mumbai - 400001</p>
+          <div class="address-selector" style="margin-bottom: 1rem;" id="address-radio-group">
+            ${ext.savedAddresses.map((addr, i) => `
+              <label style="display:flex; align-items:center; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px; background: #f8fafc; font-size: 0.9rem; cursor: pointer; transition: border-color 0.2s;">
+                <input type="radio" name="addressSelect" value="${addr.text}" ${i === 0 ? 'checked' : ''} style="accent-color: var(--primary); transform: scale(1.2);">
+                <span style="color: var(--text-main); font-weight: 500;">${addr.type}: ${addr.text}</span>
+              </label>
+            `).join('')}
+              <label style="display:flex; align-items:center; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px; background: #f8fafc; font-size: 0.9rem; cursor: pointer; transition: border-color 0.2s;">
+                <input type="radio" name="addressSelect" value="custom" ${ext.savedAddresses.length === 0 ? 'checked' : ''} style="accent-color: var(--primary); transform: scale(1.2);">
+                <span style="color: var(--text-main); font-weight: 500;">Enter Custom Address...</span>
+              </label>
+            <div id="custom-address-container" style="display: ${ext.savedAddresses.length === 0 ? 'block' : 'none'}; margin-top: 10px;">
+              <textarea id="address-input" placeholder="Enter your full address here..." style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 0.9rem; min-height: 80px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'"></textarea>
+            </div>
           </div>
-          <button class="text-btn">Change Address</button>
+          <div style="display: flex; gap: 10px;">
+            <button id="locate-me-btn" class="text-btn" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe;">
+              <i class="fas fa-location-arrow"></i> Use Live Location
+            </button>
+            <button id="change-address-btn" class="text-btn" style="flex: 1;">Change Address</button>
+          </div>
+          <p id="location-status" style="display:none; font-size: 0.8rem; margin-top: 5px; color: #64748b;"></p>
         </div>
 
         <!-- Payment Section -->
@@ -46,32 +66,32 @@ export function renderCheckout(cart, total) {
           <h3><i class="fas fa-wallet"></i> Payment Method</h3>
           <div class="payment-options">
              <label class="payment-option selected">
-               <input type="radio" name="payment" value="cod" checked>
+               <input type="radio" name="payment" value="wallet" checked>
+               <span class="radio-custom"></span>
+               <div class="pay-label">
+                 <i class="fas fa-wallet"></i>
+                  <span>Pay from Wallet (₹${ext.walletBalance || 0})</span>
+               </div>
+             </label>
+             <label class="payment-option">
+               <input type="radio" name="payment" value="cod">
                <span class="radio-custom"></span>
                <div class="pay-label">
                  <i class="fas fa-money-bill-wave"></i>
                  <span>Cash on Delivery</span>
                </div>
              </label>
-             <label class="payment-option">
-               <input type="radio" name="payment" value="online">
-               <span class="radio-custom"></span>
-               <div class="pay-label">
-                 <i class="fas fa-credit-card"></i>
-                 <span>Pay Online</span>
-               </div>
-             </label>
           </div>
         </div>
       </div> <!-- End checkout-content -->
 
-      <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); margin-top: 1rem;">
+      <div style="background: rgba(255, 255, 255, 0.95); padding: 1.5rem; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); margin-top: 1rem; border: 1px solid #f1f5f9;">
          <div class="total-display">
-           <small>To Pay</small>
-           <strong>₹${total}</strong>
+           <small style="color: #64748b; font-weight: 600;">Final Amount</small>
+           <strong style="color: #1e293b; font-size: 1.5rem;">₹${total}</strong>
          </div>
-         <button id="place-order-btn" class="auth-btn" style="margin-top: 0; width: auto; padding: 0.8rem 2rem;">
-           Place Order <i class="fas fa-chevron-right"></i>
+         <button id="place-order-btn" class="auth-btn" style="margin-top: 0; width: auto; padding: 1rem 2.5rem; background: #4f46e5; color: white; border-radius: 14px; font-weight: 700; font-size: 1rem; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);">
+           Place Order <i class="fas fa-chevron-right" style="margin-left: 8px;"></i>
          </button>
       </div>
     </div>
@@ -102,76 +122,55 @@ export function setupCheckoutEvents(cart, total, onSuccess) {
     successHomeBtn.onclick = () => window.location.reload();
   }
 
-  const placeOrderBtn = document.getElementById('place-order-btn');
-  if (placeOrderBtn) {
-    placeOrderBtn.onclick = async () => {
-      placeOrderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-      placeOrderBtn.disabled = true;
+  const addressRadios = document.querySelectorAll('input[name="addressSelect"]');
+  const customAddrContainer = document.getElementById('custom-address-container');
+  if (addressRadios.length > 0) {
+    addressRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        customAddrContainer.style.display = e.target.value === 'custom' ? 'block' : 'none';
+      });
+    });
+  }
 
-      try {
-        const user = JSON.parse(localStorage.getItem('vastra_user'));
-        if (!user) {
-          alert('Please login to place an order');
-          window.location.reload();
-          return;
-        }
+  const locateBtn = document.getElementById('locate-me-btn');
+  if (locateBtn) {
+    locateBtn.onclick = () => {
+      const status = document.getElementById('location-status');
+      status.style.display = 'block';
+      status.innerText = '📍 Fetching location...';
+      status.style.color = '#3b82f6';
 
-        // --- NEW LOGIC: Check Wallet Balance ---
-        const { getUserData, updateUserData } = await import('../data/mock-data.js');
-        const extData = getUserData(user.email);
-
-        // We will read the selected payment method. However, based on the prompt "money should be deducted from wallet",
-        // we enforce wallet check if Online/Wallet is intended, OR we assume all orders use the wallet for this feature.
-        // For demonstration, we assume "Pay Online" means "Use Vastra Wallet".
-        const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
-
-        if (paymentMethod === 'online') {
-          if (extData.walletBalance < total) {
-            alert(`Insufficient wallet balance. Total is ₹${total}, but you have ₹${extData.walletBalance.toFixed(2)}. Please add money to your wallet.`);
-            placeOrderBtn.innerHTML = 'Place Order <i class="fas fa-chevron-right"></i>';
-            placeOrderBtn.disabled = false;
-            return;
-          }
-        }
-        // ----------------------------------------
-
-        const orderData = {
-          userEmail: user.mobile || user.email,
-          items: cart.map(item => ({
-            itemName: item.itemName || item.name,
-            serviceName: item.serviceName || item.service,
-            price: item.price,
-            quantity: item.quantity || item.qty
-          })),
-          totalAmount: total,
-          date: new Date().toLocaleDateString('en-IN'),
-          status: 'Order Received'
-        };
-
-        await api.createOrder(orderData);
-
-        // --- NEW LOGIC: Deduct Balance ---
-        if (paymentMethod === 'online') {
-          extData.walletBalance -= total;
-          // Also award coins: 10 coins per 100 spent
-          const earnedCoins = Math.floor(total / 100) * 10;
-          extData.vastraCoins += earnedCoins;
-          updateUserData(user.email, extData);
-        }
-        // ---------------------------------
-
-        // Clear Cart
-        localStorage.removeItem('vastra_cart');
-
-        // Callback to switch view
-        if (onSuccess) onSuccess();
-
-      } catch (error) {
-        console.error(error);
-        alert('Failed to place order: ' + error.message);
-        placeOrderBtn.innerHTML = 'Place Order <i class="fas fa-chevron-right"></i>';
-        placeOrderBtn.disabled = false;
+      if (!navigator.geolocation) {
+        status.innerText = '❌ Geolocation not supported';
+        status.style.color = '#ef4444';
+        return;
       }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(4);
+          const lng = pos.coords.longitude.toFixed(4);
+          const addr = `Live Location (${lat}, ${lng})`;
+
+          // Add to select and select it
+          const select = document.getElementById('address-select');
+          const option = document.createElement('option');
+          option.value = addr;
+          option.text = `📍 ${addr}`;
+          option.selected = true;
+          select.add(option, select.options[0]);
+
+          status.innerText = '✅ Location detected and applied!';
+          status.style.color = '#10b981';
+        },
+        (err) => {
+          status.innerText = `❌ Error: ${err.message}`;
+          status.style.color = '#ef4444';
+        },
+        { enableHighAccuracy: true }
+      );
     };
   }
+
+  // Note: place-order-btn click is handled in main.js to avoid scoping issues with this.state
 }

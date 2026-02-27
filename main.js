@@ -33,8 +33,10 @@ if (window.Capacitor) {
 }
 
 import { api } from './src/api.js'
+import { overrideNativePopups } from './src/components/modals.js'
+import { initializeUserData, updateUserData, MOCK_DATA, getUserData } from './src/data/mock-data.js'
 
-import { initializeUserData, updateUserData } from './src/data/mock-data.js'
+overrideNativePopups();
 
 const app = {
     state: {
@@ -50,25 +52,69 @@ const app = {
         this.state.user = JSON.parse(localStorage.getItem('vastra_user'));
 
         if (this.state.user) {
-            initializeUserData(this.state.user);
+            // Synchronize with extension storage (which the header and other components use)
+            const ext = initializeUserData(this.state.user);
+            this.state.user = { ...this.state.user, ...ext };
+
             document.body.classList.add('customer-theme');
 
-            // Fetch Real Orders
+            // Refresh user data from DB to ensure coins/wallet/addresses are up to date
             try {
-                if (this.state.user.role === 'admin') {
-                    this.state.orders = await api.getAllOrders();
-                } else {
-                    // Use mobile or email
-                    const identifier = this.state.user.mobile || this.state.user.email;
-                    console.log('Fetching orders for:', identifier); // Debug
-                    this.state.orders = await api.getUserOrders(identifier);
+                const users = await api.getAllUsers();
+                const freshUser = users.find(u => u._id === this.state.user._id || u.mobile === this.state.user.mobile || u.email === this.state.user.email);
+
+                if (freshUser) {
+                    // Update state with fresh DB data
+                    this.state.user = { ...this.state.user, ...freshUser };
+
+                    // Migration: If DB has 0 but local has balance, update DB once
+                    const ext = getUserData(this.state.user.email);
+                    if ((freshUser.walletBalance === 0 || freshUser.walletBalance === undefined) && ext.walletBalance > 0) {
+                        console.log('Migrating local balance to DB:', ext.walletBalance);
+                        const updated = await api.updateProfile(freshUser._id, { walletBalance: ext.walletBalance });
+                        this.state.user = { ...this.state.user, ...updated.user };
+                    }
+
+                    if ((freshUser.vastraCoins === 0 || freshUser.vastraCoins === undefined) && ext.vastraCoins > 0) {
+                        const updated = await api.updateProfile(freshUser._id, { vastraCoins: ext.vastraCoins });
+                        this.state.user = { ...this.state.user, ...updated.user };
+                    }
+
+                    localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+
+                    // Sync extensions to match DB
+                    updateUserData(this.state.user.email, {
+                        ...ext,
+                        walletBalance: this.state.user.walletBalance,
+                        vastraCoins: this.state.user.vastraCoins,
+                        savedAddresses: this.state.user.savedAddresses || ext.savedAddresses,
+                        notifications: this.state.user.notifications || ext.notifications
+                    });
+
+                    // Fetch Order History from DB
+                    try {
+                        const dbOrders = await api.getUserOrders(this.state.user.mobile);
+                        if (dbOrders && Array.isArray(dbOrders)) {
+                            this.state.orders = dbOrders;
+                            localStorage.setItem('vastra_orders', JSON.stringify(this.state.orders));
+                        }
+                    } catch (orderErr) {
+                        console.warn('Failed to fetch orders from DB:', orderErr);
+                    }
                 }
             } catch (err) {
-                console.error('Failed to fetch orders:', err);
-                // Fallback to local if offline? Or just empty.
+                console.warn('Could not refresh user data from DB:', err);
             }
         }
         this.render();
+        // Hide loading overlay after initial render
+        const loader = document.getElementById('loading-overlay');
+        if (loader) {
+            setTimeout(() => {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }, 1000); // Show for at least 1 second for the animation
+        }
     },
 
     render() {
@@ -106,13 +152,58 @@ const app = {
             case 'success':
                 return renderSuccess();
             case 'track':
-                const latestOrder = this.state.orders[this.state.orders.length - 1];
-                return latestOrder ? renderTracking(latestOrder) : `<div class="page-content"><h2>No active orders</h2><button id="track-home-btn" class="auth-btn">Go Home</button></div>`;
+                const orderToTrack = this.state.activeTrackingOrder || this.state.orders[this.state.orders.length - 1];
+                return orderToTrack ? renderTracking(orderToTrack) : `<div class="page-content animate-fade-in" style="text-align:center; padding: 4rem 2rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
+                    <h2>No Order Selected</h2>
+                    <p style="color: #64748b; margin-bottom: 2rem;">Enter a tracking ID on the home screen to see status.</p>
+                    <button id="track-home-btn" class="auth-btn">Back to Home</button>
+                    </div>`;
             case 'profile':
                 return renderProfile(this.state.user, this.state.orders, () => this.logout());
+            case 'vastra-pro':
+                return this.renderVastraPro();
             default:
                 return `<h2>Coming Soon</h2>`;
         }
+    },
+
+    renderVastraPro() {
+        const packages = MOCK_DATA.proPackages;
+        return `
+            <div class="page-content fade-in">
+                <div class="checkout-header" style="margin-bottom: 2rem;">
+                    <button id="back-home-pro" class="icon-btn"><i class="fas fa-arrow-left"></i></button>
+                    <h1>Vastra Pro 💎</h1>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 2.5rem;">
+                    <h2 style="font-size: 1.8rem; color: #1e293b; margin-bottom: 0.5rem;">Elevate Your Laundry Experience</h2>
+                    <p style="color: #64748b;">Choose a plan that fits your lifestyle.</p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    ${packages.map(pkg => `
+                        <div class="glass-card" style="padding: 2rem; border-radius: 24px; border: 2px solid ${pkg.id === 'monthly' ? '#e2e8f0' : '#4f46e5'}; position: relative; overflow: hidden;">
+                            ${pkg.id === 'quarterly' ? '<div style="position: absolute; top: 1rem; right: -2rem; background: #4f46e5; color: white; padding: 0.5rem 3rem; transform: rotate(45deg); font-size: 0.75rem; font-weight: 800;">POPULAR</div>' : ''}
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.4rem;">${pkg.name}</h3>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.9rem;">${pkg.duration}</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 1.8rem; font-weight: 800; color: #1e293b;">₹${pkg.price}</span>
+                                </div>
+                            </div>
+                            <ul style="margin: 1.5rem 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+                                ${pkg.features.map(f => `<li style="display: flex; align-items: center; gap: 10px; font-size: 0.95rem; color: #475569;"><i class="fas fa-check-circle" style="color: #10b981;"></i> ${f}</li>`).join('')}
+                            </ul>
+                            <button class="auth-btn buy-pro-btn" data-id="${pkg.id}" data-price="${pkg.price}" style="background: ${pkg.id === 'monthly' ? '#1e293b' : 'linear-gradient(135deg, #4f46e5, #6366f1)'}; color: white; border: none; margin-top: 1rem;">Subscribe Now</button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
     },
 
     showAuth(type) {
@@ -139,7 +230,6 @@ const app = {
         } else {
             // If Android, exit. Otherwise, regular back.
             if (window.Capacitor) {
-                const { App } = require('@capacitor/app');
                 App.exitApp();
             } else {
                 window.history.back();
@@ -147,7 +237,7 @@ const app = {
         }
     },
 
-    addToCart(itemName, price, quantity) {
+    addToCart(itemName, price, quantity, skipNavigate = false) {
         if (quantity <= 0) return;
         const existing = this.state.cart.find(i => i.itemName === itemName && i.serviceName === this.state.activeService);
         if (existing) {
@@ -160,7 +250,11 @@ const app = {
                 serviceName: this.state.activeService
             });
         }
-        this.navigateTo('home');
+        if (!skipNavigate) {
+            this.navigateTo('home');
+        } else {
+            this.render();
+        }
     },
 
     attachEvents() {
@@ -251,13 +345,34 @@ const app = {
 
         // Side Menu functional links
         const payBtn = document.getElementById('menu-payment-btn');
-        if (payBtn) payBtn.onclick = () => { closeMenu(); alert("Payment Details Section"); };
+        if (payBtn) payBtn.onclick = () => {
+            closeMenu();
+            this.navigateTo('profile');
+            setTimeout(() => {
+                const historySection = document.querySelector('.history-list');
+                if (historySection) historySection.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        };
 
         const walletBtn = document.getElementById('menu-wallet-btn');
-        if (walletBtn) walletBtn.onclick = () => { closeMenu(); alert("Vastra Wallet Section"); };
+        if (walletBtn) walletBtn.onclick = () => {
+            closeMenu();
+            this.navigateTo('profile');
+            setTimeout(() => {
+                const walletSection = document.querySelector('.profile-section').previousElementSibling; // Digital Wallet card
+                if (walletSection) walletSection.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        };
 
         const addrBtn = document.getElementById('menu-address-btn');
-        if (addrBtn) addrBtn.onclick = () => { closeMenu(); alert("Saved Addresses Section"); };
+        if (addrBtn) addrBtn.onclick = () => {
+            closeMenu();
+            this.navigateTo('profile');
+            setTimeout(() => {
+                const addrSection = document.getElementById('add-address-btn').closest('.profile-section');
+                if (addrSection) addrSection.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        };
 
         const logoutMenuBtn = document.getElementById('menu-logout-btn');
         if (logoutMenuBtn) logoutMenuBtn.onclick = () => { closeMenu(); this.logout(); };
@@ -279,11 +394,110 @@ const app = {
             });
         }
 
+        // Exchange Coins Logic
+        const exchangeCoinsBtn = document.getElementById('exchange-coins-btn');
+        if (exchangeCoinsBtn) {
+            exchangeCoinsBtn.onclick = async () => {
+                const user = this.state.user;
+                if ((user.vastraCoins || 0) < 100) {
+                    alert('You need at least 100 coins to exchange.');
+                    return;
+                }
+                const coinsToExchange = Math.floor(ext.vastraCoins / 100) * 100;
+                const cashReceived = coinsToExchange / 100;
+
+                if (confirm(`Exchange ${coinsToExchange} coins for ₹${cashReceived}?`)) {
+                    try {
+                        const updateData = {
+                            vastraCoins: ext.vastraCoins - coinsToExchange,
+                            walletBalance: (ext.walletBalance || 0) + cashReceived
+                        };
+                        const result = await api.updateProfile(this.state.user._id, updateData);
+                        this.state.user = result.user;
+                        localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+                        updateUserData(this.state.user.email, {
+                            ...getUserData(this.state.user.email),
+                            vastraCoins: this.state.user.vastraCoins,
+                            walletBalance: this.state.user.walletBalance
+                        });
+                        alert(`Success! Exchanged ${coinsToExchange} coins for ₹${cashReceived}.`);
+                        this.render();
+                    } catch (err) {
+                        alert('Exchange failed: ' + err.message);
+                    }
+                }
+            };
+        }
+
         // Home events
         const homeCards = document.querySelectorAll('.service-card');
         homeCards.forEach(card => {
             card.onclick = () => this.navigateTo('services', card.dataset.id);
         });
+
+        // Pro Badge Button
+        const proBadgeBtns = document.querySelectorAll('.pro-badge-btn');
+        proBadgeBtns.forEach(btn => {
+            btn.onclick = () => this.navigateTo('vastra-pro');
+        });
+
+        const trackBtnHome = document.getElementById('track-btn-home');
+        if (trackBtnHome) {
+            trackBtnHome.onclick = async () => {
+                const input = document.getElementById('tracking-input').value.trim();
+                const errorEl = document.getElementById('tracking-error-home');
+                if (!input) return;
+
+                trackBtnHome.innerText = '...';
+                try {
+                    const order = await api.getOrderByTrackingId(input);
+                    this.state.activeTrackingOrder = order;
+                    this.navigateTo('track');
+                } catch (err) {
+                    errorEl.innerText = "Invalid Tracking ID. Please check your email.";
+                    errorEl.style.display = 'block';
+                    trackBtnHome.innerText = 'Track';
+                }
+            };
+        }
+
+        // Daily Check-In Logic
+        const checkinBtn = document.getElementById('daily-checkin-btn');
+        if (checkinBtn) {
+            const lastCheckin = this.state.user.lastCheckinDate; // format: 'YYYY-MM-DD'
+            const today = new Date().toISOString().split('T')[0];
+
+            if (lastCheckin === today) {
+                checkinBtn.innerText = 'Checked-In Today ✅';
+                checkinBtn.disabled = true;
+                checkinBtn.style.background = '#e2e8f0';
+                checkinBtn.style.color = '#94a3b8';
+                checkinBtn.style.cursor = 'default';
+            } else {
+                checkinBtn.onclick = async () => {
+                    try {
+                        const updateData = {
+                            vastraCoins: (this.state.user.vastraCoins || 0) + 50,
+                            lastCheckinDate: today
+                        };
+                        const result = await api.updateProfile(this.state.user._id, updateData);
+                        this.state.user = result.user;
+                        localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+
+                        // Sync results to extension storage (header uses this)
+                        updateUserData(this.state.user.email, {
+                            ...getUserData(this.state.user.email),
+                            vastraCoins: this.state.user.vastraCoins
+                        });
+
+                        alert('Congrats! You earned 50 Vastra Coins for checking in today.');
+                        this.render();
+                    } catch (err) {
+                        alert('Check-in failed: ' + err.message);
+                    }
+                };
+            }
+        }
 
         // Service Detail events
         const backBtn = document.getElementById('back-to-home');
@@ -346,9 +560,17 @@ const app = {
 
                 const itemPricing = serviceItems[this.state.activeService] || {};
 
+                let added = false;
                 Object.entries(qtys).forEach(([item, qty]) => {
-                    if (qty > 0) this.addToCart(item, itemPricing[item], qty);
+                    if (qty > 0) {
+                        this.addToCart(item, itemPricing[item], qty, true);
+                        added = true;
+                    }
                 });
+                if (added) {
+                    alert('Items added to cart!');
+                    this.navigateTo('home');
+                }
             };
         }
 
@@ -422,25 +644,81 @@ const app = {
             };
         }
 
-        const confirmOrderBtn = document.getElementById('confirm-order-btn');
-        if (confirmOrderBtn) {
-            confirmOrderBtn.onclick = async () => {
+        const placeOrderBtn = document.getElementById('place-order-btn');
+        if (placeOrderBtn) {
+            placeOrderBtn.onclick = async () => {
+                const addrRadio = document.querySelector('input[name="addressSelect"]:checked');
+                let finalAddress = addrRadio ? addrRadio.value : '';
+                if (finalAddress === 'custom') {
+                    finalAddress = document.getElementById('address-input').value.trim();
+                    if (!finalAddress) {
+                        alert('Please enter a custom address');
+                        return;
+                    }
+                }
+
+                const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+                const total = this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+                if (paymentMethod === 'wallet' && (this.state.user.walletBalance || 0) < total) {
+                    alert('Insufficient wallet balance!');
+                    return;
+                }
+
+                placeOrderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                placeOrderBtn.disabled = true;
+
+                const userEmailDefault = this.state.user.email || 'guest';
                 const order = {
-                    userEmail: this.state.user.email || this.state.user.mobile, // Backend needs identifier
+                    userEmail: this.state.user.email || undefined,
+                    userMobile: this.state.user.mobile,
                     items: [...this.state.cart],
-                    totalAmount: this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) + 2, // Basic total + delivery fee
-                    date: new Date().toLocaleDateString(),
-                    status: 'Pending'
+                    totalAmount: total,
+                    address: finalAddress,
+                    date: new Date().toLocaleDateString('en-IN'),
+                    status: 'Order Received',
+                    trackingId: 'VST-' + Math.random().toString(36).substr(2, 9).toUpperCase()
                 };
 
                 try {
                     const savedOrder = await api.createOrder(order);
-                    this.state.orders.push(savedOrder);
+
+                    const earnedCoins = Math.floor(total / 100) * 10;
+                    const newNotifications = [...(this.state.user.notifications || [])];
+                    newNotifications.unshift({
+                        text: `Order ${order.trackingId} placed! Tracking ID: ${order.trackingId}`,
+                        date: new Date().toLocaleDateString('en-IN'),
+                        read: false
+                    });
+
+                    const updateData = {
+                        vastraCoins: (this.state.user.vastraCoins || 0) + earnedCoins,
+                        notifications: newNotifications
+                    };
+
+                    if (paymentMethod === 'wallet') {
+                        updateData.walletBalance = (this.state.user.walletBalance || 0) - total;
+                    }
+
+                    const result = await api.updateProfile(this.state.user._id, updateData);
+                    this.state.user = result.user;
+                    localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+                    updateUserData(userEmailDefault, {
+                        ...getUserData(userEmailDefault),
+                        vastraCoins: this.state.user.vastraCoins,
+                        walletBalance: this.state.user.walletBalance,
+                        notifications: this.state.user.notifications
+                    });
+
+                    this.state.orders.unshift(savedOrder);
                     this.state.cart = [];
+                    localStorage.removeItem('vastra_cart');
                     this.navigateTo('success');
                 } catch (error) {
-                    alert('Failed to place order. Please try again.');
+                    alert('Failed to place order: ' + error.message);
                     console.error(error);
+                    placeOrderBtn.innerHTML = 'Place Order <i class="fas fa-chevron-right"></i>';
+                    placeOrderBtn.disabled = false;
                 }
             };
         }
@@ -479,7 +757,7 @@ const app = {
         document.querySelectorAll('.reorder-btn').forEach(btn => {
             btn.onclick = () => {
                 const orderId = btn.dataset.id;
-                const pastOrder = this.state.orders.find(o => o.id === orderId);
+                const pastOrder = this.state.orders.find(o => (o._id || o.id) === orderId);
                 if (pastOrder) {
                     this.state.cart = [...pastOrder.items];
                     this.navigateTo('checkout');
@@ -491,73 +769,294 @@ const app = {
         const addMoneyBtn = document.getElementById('add-money-btn');
         const headerWalletBtn = document.getElementById('wallet-btn');
 
-        const handleAddMoney = () => {
-            const amount = prompt('Enter amount to add:', '50');
-            if (amount && !isNaN(amount)) {
-                // Mock Payment Flow as requested
-                const card = prompt('Enter Card Number (Mock):', '1234-5678-9012-3456');
-                if (card) {
-                    const expiry = prompt('Enter Expiry (MM/YY):', '12/28');
-                    if (expiry) {
-                        const cvv = prompt('Enter CVV:', '123');
-                        if (cvv) {
-                            const ext = initializeUserData(this.state.user);
-                            ext.walletBalance += parseFloat(amount);
-                            updateUserData(this.state.user.email, ext);
-                            this.render();
-                            alert(`Payment Successful! Added ₹${amount} to wallet.`);
+        const handleAddMoney = async () => {
+            const amountStr = await window.customPrompt('Enter amount to add:', '50');
+            if (!amountStr || isNaN(amountStr)) return;
+            const amount = parseFloat(amountStr);
+
+            try {
+                // 1. Create Razorpay Order
+                const API_URL = 'https://vastra-green.vercel.app/api'; // Or fallback to env/config
+                const orderRes = await fetch(`${API_URL}/payment/create-order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount })
+                });
+                const orderData = await orderRes.json();
+
+                if (!orderData.success) throw new Error(orderData.message || 'Could not create order');
+
+                // 2. Open Razorpay Checkout
+                const options = {
+                    key: "rzp_test_dummykey12345", // Replace with real key in production
+                    amount: orderData.order.amount,
+                    currency: "INR",
+                    name: "Vastra Laundry",
+                    description: "Wallet Top-up",
+                    image: "/logo.jpg",
+                    order_id: orderData.order.id,
+                    handler: async function (response) {
+                        try {
+                            // 3. Verify Payment
+                            const verifyRes = await fetch(`${API_URL}/payment/verify-payment`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+                            const verifyData = await verifyRes.json();
+
+                            if (verifyData.success) {
+                                // 4. Update Wallet 
+                                const updateData = { walletBalance: (app.state.user.walletBalance || 0) + amount };
+                                const result = await api.updateProfile(app.state.user._id, updateData);
+                                app.state.user = result.user;
+                                localStorage.setItem('vastra_user', JSON.stringify(app.state.user));
+
+                                const userEmail = app.state.user.email || 'guest';
+                                updateUserData(userEmail, {
+                                    ...getUserData(userEmail),
+                                    walletBalance: app.state.user.walletBalance
+                                });
+
+                                app.render(); // Re-render to show new balance
+                                await window.customAlert(`Payment Successful! Added ₹${amount} to wallet.`, 'Success');
+                            } else {
+                                await window.customAlert('Payment verification failed.', 'Error');
+                            }
+                        } catch (err) {
+                            await window.customAlert('Error verifying payment: ' + err.message, 'Error');
                         }
+                    },
+                    prefill: {
+                        name: this.state.user.name,
+                        contact: this.state.user.mobile,
+                        email: this.state.user.email || ""
+                    },
+                    theme: {
+                        color: "#4f46e5"
+                    }
+                };
+
+                const rzp = new window.Razorpay(options);
+                rzp.on('payment.failed', async function (response) {
+                    await window.customAlert('Payment Failed: ' + response.error.description, 'Failed');
+                });
+                rzp.open();
+
+            } catch (err) {
+                await window.customAlert('Payment initialization failed: ' + err.message, 'Error');
+            }
+        };
+
+        if (addMoneyBtn) addMoneyBtn.onclick = handleAddMoney;
+        if (headerWalletBtn) headerWalletBtn.onclick = handleAddMoney;
+
+        const addAddrBtn = document.getElementById('add-address-btn');
+        if (addAddrBtn) {
+            addAddrBtn.onclick = async () => {
+                const type = await window.customPrompt('Location Type (e.g. Gym, Parents):', 'Gym');
+                if (type) {
+                    const newAddresses = [...(this.state.user.savedAddresses || [])];
+                    newAddresses.push({
+                        id: Date.now(),
+                        type: type,
+                        text: '123 New Place, Vastra City'
+                    });
+
+                    try {
+                        const result = await api.updateProfile(this.state.user._id, { savedAddresses: newAddresses });
+                        this.state.user = result.user;
+                        localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+                        this.render();
+                    } catch (err) {
+                        alert('Failed to add address: ' + err.message);
                     }
                 }
             };
+        }
 
-            if (addMoneyBtn) addMoneyBtn.onclick = handleAddMoney;
-            if (headerWalletBtn) headerWalletBtn.onclick = handleAddMoney;
+        // Address Management (Edit Logic)
+        const addrModalOverlay = document.getElementById('addr-modal-overlay');
+        const addrModal = document.getElementById('addr-modal');
+        const closeAddrBtn = document.getElementById('close-addr-modal');
 
-            const addAddrBtn = document.getElementById('add-address-btn');
-            if (addAddrBtn) {
-                addAddrBtn.onclick = () => {
-                    const type = prompt('Location Type (e.g. Gym, Parents):', 'Gym');
-                    if (type) {
-                        const ext = initializeUserData(this.state.user);
-                        ext.savedAddresses.push({
-                            id: Date.now(),
-                            type: type,
-                            text: '123 New Place, Vastra City'
-                        });
-                        updateUserData(this.state.user.email, ext);
-                        this.render();
+        const openAddrModal = (addr = null) => {
+            if (!addrModalOverlay) return;
+            addrModalOverlay.style.display = 'flex';
+            setTimeout(() => {
+                addrModalOverlay.style.opacity = '1';
+                addrModal.style.transform = 'translateY(0)';
+            }, 10);
+
+            if (addr) {
+                document.getElementById('addr-modal-title').innerText = 'Edit Address';
+                document.getElementById('edit-addr-id').value = addr.id;
+                document.getElementById('edit-addr-type').value = addr.type;
+
+                // Parse address text "Door No, Street Name, Village, City"
+                const parts = addr.text.split(',').map(p => p.trim());
+                document.getElementById('edit-addr-door').value = parts[0] || '';
+                document.getElementById('edit-addr-street').value = parts[1] || '';
+                document.getElementById('edit-addr-village').value = parts[2] || '';
+                document.getElementById('edit-addr-city').value = parts[3] || '';
+            } else {
+                document.getElementById('addr-modal-title').innerText = 'Add New Address';
+                document.getElementById('edit-addr-id').value = '';
+                document.getElementById('edit-addr-type').value = '';
+                document.getElementById('edit-addr-door').value = '';
+                document.getElementById('edit-addr-street').value = '';
+                document.getElementById('edit-addr-village').value = '';
+                document.getElementById('edit-addr-city').value = '';
+            }
+        };
+
+        const closeAddrModal = () => {
+            if (!addrModalOverlay) return;
+            addrModalOverlay.style.opacity = '0';
+            addrModal.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                addrModalOverlay.style.display = 'none';
+            }, 300);
+        };
+
+        if (closeAddrBtn) closeAddrBtn.onclick = closeAddrModal;
+        if (addrModalOverlay) addrModalOverlay.onclick = (e) => {
+            if (e.target === addrModalOverlay) closeAddrModal();
+        };
+
+        document.querySelectorAll('.edit-address-btn').forEach(btn => {
+            btn.onclick = () => {
+                const ext = initializeUserData(this.state.user);
+                const addr = ext.savedAddresses.find(a => a.id == btn.dataset.id);
+                if (addr) openAddrModal(addr);
+            };
+        });
+
+        if (addAddrBtn) addAddrBtn.onclick = () => openAddrModal();
+
+        const saveAddrBtn = document.getElementById('save-addr-btn');
+        if (saveAddrBtn) {
+            saveAddrBtn.onclick = async () => {
+                const id = document.getElementById('edit-addr-id').value;
+                const type = document.getElementById('edit-addr-type').value.trim();
+                const door = document.getElementById('edit-addr-door').value.trim();
+                const street = document.getElementById('edit-addr-street').value.trim();
+                const village = document.getElementById('edit-addr-village').value.trim();
+                const city = document.getElementById('edit-addr-city').value.trim();
+
+                if (!type || !street || !city) {
+                    alert('Please fill in required fields (Category, Street, City)');
+                    return;
+                }
+
+                const fullText = `${door ? door + ', ' : ''}${street}, ${village ? village + ', ' : ''}${city}`;
+                const ext = this.state.user;
+                const newAddresses = [...(ext.savedAddresses || [])];
+
+                if (id) {
+                    // Update
+                    const addrIdx = newAddresses.findIndex(a => a.id == id || a._id == id);
+                    if (addrIdx !== -1) {
+                        newAddresses[addrIdx] = { ...newAddresses[addrIdx], type, text: fullText };
                     }
-                };
-            }
-
-            // Copy Referral
-            const copyRefBtn = document.getElementById('copy-referral-btn');
-            if (copyRefBtn) {
-                copyRefBtn.onclick = () => {
-                    const code = 'VASTRA-MAHA-2026';
-                    navigator.clipboard.writeText(code).then(() => {
-                        copyRefBtn.innerText = 'Copied!';
-                        setTimeout(() => copyRefBtn.innerText = 'Copy', 2000);
+                } else {
+                    // Add New
+                    newAddresses.push({
+                        id: Date.now(),
+                        type: type,
+                        text: fullText
                     });
-                };
-            }
+                }
 
-            // Checkout Events
-            if (this.state.view === 'checkout') {
-                const total = this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                setupCheckoutEvents(this.state.cart, total, () => {
-                    this.state.cart = [];
-                    // Add temp order to local state for immediate feedback if needed, 
-                    // but re-init will fetch it.
-                    this.navigateTo('success');
+                try {
+                    const result = await api.updateProfile(this.state.user._id, { savedAddresses: newAddresses });
+                    this.state.user = result.user;
+                    localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+                    closeAddrModal();
+                    this.render();
+                } catch (err) {
+                    console.error('Save address error:', err);
+                    alert('Failed to save address. Please check your connection.');
+                }
+            };
+        }
+
+        // Pro Package Subscription
+        document.querySelectorAll('.buy-pro-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const price = parseFloat(btn.dataset.price);
+                if (confirm(`Subscribe to ${btn.dataset.id} for ₹${price}?`)) {
+                    if ((this.state.user.walletBalance || 0) < price) {
+                        alert('Insufficient wallet balance!');
+                        return;
+                    }
+                    try {
+                        const updateData = {
+                            walletBalance: this.state.user.walletBalance - price,
+                            subscription: 'Pro'
+                        };
+                        const result = await api.updateProfile(this.state.user._id, updateData);
+                        this.state.user = result.user;
+                        localStorage.setItem('vastra_user', JSON.stringify(this.state.user));
+                        updateUserData(this.state.user.email, {
+                            ...getUserData(this.state.user.email),
+                            walletBalance: this.state.user.walletBalance,
+                            subscription: this.state.user.subscription
+                        });
+                        alert('Congratulations! You are now a Vastra Pro Member! 💎');
+                        this.navigateTo('home');
+                    } catch (err) {
+                        alert('Subscription failed: ' + err.message);
+                    }
+                }
+            };
+        });
+
+        // Copy Referral
+        const copyRefBtn = document.getElementById('copy-referral-btn');
+        if (copyRefBtn) {
+            copyRefBtn.onclick = () => {
+                const code = 'VASTRA-MAHA-2026';
+                navigator.clipboard.writeText(code).then(() => {
+                    copyRefBtn.innerText = 'Copied!';
+                    setTimeout(() => copyRefBtn.innerText = 'Copy', 2000);
                 });
-            }
+            };
+        }
 
-            // Success Events
-            if (this.state.view === 'success') {
-                setupCheckoutEvents(); // Reuse for back button
-            }
+        // Checkout Events
+        if (this.state.view === 'checkout') {
+            const total = this.state.cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            setupCheckoutEvents(this.state.cart, total, (newOrder) => {
+                if (newOrder) {
+                    this.state.orders.unshift(newOrder); // Add to top of list
+                    this.saveOrders();
+                }
+                this.state.cart = [];
+                this.navigateTo('success');
+            });
+        }
+
+        const backPro = document.getElementById('back-home-pro');
+        if (backPro) backPro.onclick = () => this.goBack();
+
+        const proBtnHome = document.querySelector('.welcome-section .auth-btn');
+        if (proBtnHome && proBtnHome.innerText.includes('Pro')) {
+            proBtnHome.onclick = () => this.navigateTo('vastra-pro');
+        }
+
+        const joinNowBtn = document.querySelector('.promo-banner .auth-btn');
+        if (joinNowBtn) {
+            joinNowBtn.onclick = () => this.navigateTo('vastra-pro');
+        }
+
+        // Success Events
+        if (this.state.view === 'success') {
+            setupCheckoutEvents(); // Reuse for back button
         }
     },
 

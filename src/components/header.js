@@ -2,7 +2,8 @@ import { getUserData } from '../data/mock-data.js';
 
 export function renderHeader(user, onNavigate, cartCount) {
   const ext = getUserData(user.email);
-  const unreadCount = ext.notifications.filter(n => !n.read).length;
+  const merged = { ...ext, ...user }; // Prioritize actual user object
+  const unreadCount = (merged.notifications || []).filter(n => !n.read).length;
 
   return `
     <header class="main-header" style="background: white; border-bottom: 1px solid #f1f5f9;">
@@ -11,14 +12,14 @@ export function renderHeader(user, onNavigate, cartCount) {
       </div>
       <div class="header-center" style="display: flex; align-items: center; gap: 0.75rem;">
           <img src="/logo.jpg" alt="Logo" style="width: 36px; height: 36px; border-radius: 10px; object-fit: contain;"> 
-          <span style="font-family: 'Syne', sans-serif; font-weight: 800; color: var(--text-main); font-size: 1.25rem; letter-spacing: -0.5px;">Vastra</span>
+          <span style="font-family: 'Syne', sans-serif; font-weight: 800; color: var(--text-main); font-size: 1.1rem; letter-spacing: -0.5px;">Vastra</span>
       </div>
       <div class="header-right" style="display: flex; gap: 0.75rem; align-items: center;">
         <button id="wallet-btn" style="background: #f0fdf4; color: #16a34a; padding: 0.35rem 0.65rem; border-radius: 12px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid #bbf7d0; cursor: pointer;">
-          👛 ₹${ext.walletBalance || 0}
+          👛 ₹${merged.walletBalance || 0}
         </button>
         <button id="coin-btn" style="background: #fffbeb; color: #b45309; padding: 0.35rem 0.65rem; border-radius: 12px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 4px; border: 1px solid #fef3c7; cursor: pointer;">
-          🪙 ${ext.vastraCoins}
+          🪙 ${merged.vastraCoins || 0}
         </button>
       </div>
     </header>
@@ -44,6 +45,7 @@ export function renderHeader(user, onNavigate, cartCount) {
         <div style="background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 12px; padding: 1rem; text-align: center; margin-bottom: 1.5rem;">
             <p style="margin: 0; color: #b45309; font-weight: 700; font-size: 1rem;">Exchange Rate</p>
             <p style="margin: 0; color: #92400e; font-size: 1.2rem; font-weight: 800; margin-top: 0.25rem;">100 Coins = ₹1</p>
+            <button id="exchange-coins-btn" class="auth-btn" style="margin-top: 1rem; background: #b45309; color: white;">Exchange Now</button>
             <p style="margin-top: 0.5rem; font-size: 0.8rem; color: #b45309;">Values are automatically applied at checkout.</p>
         </div>
         
@@ -74,7 +76,7 @@ export function renderHeader(user, onNavigate, cartCount) {
             
             <div style="height: 1px; background: #f1f5f9; margin: 0.5rem 0;"></div>
             
-            <a href="#" onclick="alert('Support Chat Opening...')" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">💬</span> Help & Support</a>
+            <a href="https://wa.me/918008514610" target="_blank" style="padding: 1rem; border-radius: 12px; color: var(--text-main); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">💬</span> Help & Support</a>
             <a href="#" id="menu-logout-btn" style="padding: 1rem; border-radius: 12px; color: #ef4444; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 1rem;"><span style="font-size: 1.2rem;">🚪</span> Logout</a>
         </div>
         <div style="margin-top: auto; padding: 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9;">

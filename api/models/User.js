@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema({
     role: { type: String, enum: ['customer', 'admin', 'partner', 'logistics'], default: 'customer' },
     walletBalance: { type: Number, default: 0 },
     vastraCoins: { type: Number, default: 0 },
+    lastCheckinDate: { type: String }, // format: 'YYYY-MM-DD'
     savedAddresses: [{
         type: { type: String },
         text: String

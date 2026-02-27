@@ -35,7 +35,7 @@ export function renderServiceDetail(serviceId, currentCart, onAddToCart, onBack)
             <textarea id="custom-request-text" rows="5" placeholder="E.g., 5 Lab Coats, 2 heavy curtains..." style="width: 100%; border: 2px solid #e2e8f0; padding: 1rem; border-radius: 12px; font-family: inherit; font-size: 1rem;"></textarea>
             <div style="margin-top: 1rem;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Estimated Budget (Optional)</label>
-                <input type="number" id="custom-budget" placeholder="$" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 2px solid #e2e8f0;">
+                <input type="number" id="custom-budget" placeholder="₹" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 2px solid #e2e8f0;">
             </div>
             <button id="submit-custom-req" class="auth-btn" style="margin-top: 1.5rem;">Request Quote</button>
         </div>
@@ -49,7 +49,7 @@ export function renderServiceDetail(serviceId, currentCart, onAddToCart, onBack)
               <label for="express-mode" style="cursor:pointer">
                 <div style="font-size: 1.5rem;">⚡</div>
                 <div style="font-weight: 700; margin: 0.2rem 0;">Express</div>
-                <div style="font-size: 0.75rem; color: #64748b;">+$5.00</div>
+                <div style="font-size: 0.75rem; color: #64748b;">+₹5.00</div>
               </label>
             </div>
             <div class="modifier-card glass-card" style="flex: 1; padding: 1rem; border-radius: 12px; cursor: pointer; text-align: center;">
@@ -70,7 +70,7 @@ export function renderServiceDetail(serviceId, currentCart, onAddToCart, onBack)
               <div class="item-row glass-card" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 12px; margin-bottom: 0.75rem; background: rgba(255,255,255,0.6);">
                 <div>
                   <h4 style="margin:0">${item}</h4>
-                  <p style="margin:0; font-size: 0.85rem; color: #64748b;">$${price.toFixed(2)} / item</p>
+                  <p style="margin:0; font-size: 0.85rem; color: #64748b;">₹${price.toFixed(2)} / item</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 1rem;">
                   <button class="qty-btn minus" data-item="${item}" style="width: 32px; height: 32px; border-radius: 50%; background: white; border: 1px solid #e2e8f0; color: #64748b;">-</button>

@@ -10,6 +10,7 @@ const adminState = {
   users: [],
   selectedOrder: null,
   selectedUser: null,
+  selectedOrderIds: [], // For bulk selection
   showRegisterModal: false,
   userTab: 'customers' // 'customers' or 'logistics'
 };
@@ -17,6 +18,7 @@ const adminState = {
 // --- Custom Theme ---
 const themeStyles = `
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     :root {
       --bg-dark: #0f172a;
       --bg-card: #1e293b;
@@ -28,12 +30,14 @@ const themeStyles = `
       --success: #10b981;
       --warning: #f59e0b;
       --danger: #ef4444;
+      --sidebar-width: 260px;
     }
     body {
       background: var(--bg-dark);
       color: var(--text-main);
       font-family: 'Inter', sans-serif;
       margin: 0;
+      overflow-x: hidden;
     }
     .dark-card {
       background: var(--bg-card);
@@ -55,81 +59,167 @@ const themeStyles = `
       transition: border-color 0.2s;
     }
     .dark-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
-    .dark-input:-webkit-autofill,
-    .dark-input:-webkit-autofill:hover, 
-    .dark-input:-webkit-autofill:focus {
-        -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
-        -webkit-text-fill-color: var(--text-main) !important;
-        transition: background-color 5000s ease-in-out 0s;
-    }
     .dark-btn {
       background: var(--accent);
       color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%;
     }
     .dark-btn:hover { background: #2563eb; box-shadow: 0 0 15px var(--accent-glow); }
     .dark-btn.success { background: var(--success); }
-    .dark-btn.success:hover { background: #059669; box-shadow: 0 0 15px rgba(16,185,129,0.4); }
     .dark-btn.danger { background: var(--danger); box-shadow: 0 0 10px rgba(239,68,68,0.2); }
-    .dark-btn.danger:hover { background: #dc2626; box-shadow: 0 0 15px rgba(239,68,68,0.4); }
     
-    .sidebar-link { transition: background 0.2s, border-left 0.2s; }
+    .sidebar-link { transition: all 0.2s; }
     .sidebar-link:hover { background: rgba(59, 130, 246, 0.1) !important; }
-    
-    table { width: 100%; border-collapse: collapse; }
+    .sidebar-link.active { background: rgba(59, 130, 246, 0.15) !important; border-left: 3px solid var(--accent) !important; color: white !important; }
+
+    .responsive-table-container { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
     th { background: #0f172a; color: var(--text-muted); font-weight: 500; font-size: 12px; padding: 16px; border-bottom: 1px solid var(--border); text-align: left;}
     td { padding: 16px; border-bottom: 1px solid var(--border); color: var(--text-main); font-size: 14px; }
     tr.clickable:hover td { background: rgba(255,255,255,0.05); cursor: pointer; }
     
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 50; display: flex; align-items: center; justify-content: center;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px;
     }
     .modal-content {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 30px; position: relative;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 30px; position: relative;
     }
     .close-btn {
-      position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: color 0.2s;
+      position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;
     }
-    .close-btn:hover { color: white; }
 
-    .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 10px 20px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-btn:hover { color: white; }
+    .hamburger { display: none; background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; z-index: 100; }
+
+    @media (max-width: 768px) {
+      .hamburger { display: block; }
+      .sidebar { 
+        transform: translateX(-100%); 
+        transition: transform 0.3s ease;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0 !important; }
+      .stats-grid { grid-template-columns: 1fr !important; }
+      .modal-content { padding: 20px; }
+      .auth-card { margin: 20px; }
+    }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 1px solid var(--accent); color: white; padding: 12px 24px; border-radius: 8px; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .toast.show { transform: translateY(0); }
+    
+    /* Autofill Fix for Dark Mode */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text-main) !important;
+      -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
+      transition: background-color 5000s ease-in-out 0s;
+      color: white !important;
+      background-color: #0f172a !important;
+    }
+    
+    input {
+      color: white !important;
+      background-color: #0f172a !important;
+    }
+    
+    input::placeholder { color: rgba(255,255,255,0.3) !important; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    
+    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+    .modal-overlay {
+      position: fixed; inset: 0; 
+      background: rgba(15, 23, 42, 0.7); 
+      backdrop-filter: blur(12px); 
+      z-index: 1000; 
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      opacity: 0; animation: overlayIn 0.3s forwards;
+    }
+    .modal-content {
+      background: var(--bg-card); 
+      border: 1px solid var(--accent); 
+      border-radius: 20px; 
+      width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 35px; 
+      position: relative;
+      transform: scale(0.9); box-shadow: 0 0 40px var(--accent-glow);
+      animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes overlayIn { to { opacity: 1; } }
+    @keyframes modalIn { to { transform: scale(1); } }
+    
+    .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-pending { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .status-assigned { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .status-completed { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
   </style>
 `;
 
+const showCustomAlert = (title, message, type = 'info') => {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-content animate-fade-in" style="max-width: 400px; text-align: center;">
+      <div style="font-size: 50px; margin-bottom: 20px;">
+        ${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}
+      </div>
+      <h2 style="margin: 0 0 10px 0; color: white;">${title}</h2>
+      <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.5;">${message}</p>
+      <button class="dark-btn" id="close-alert-btn" style="width: 100%; padding: 12px;">Understood</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('close-alert-btn').onclick = () => overlay.remove();
+};
+
+const showToast = (msg) => {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerText = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 100);
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 3000);
+};
+
 // --- Authentication Flow ---
 const renderAuth = () => {
-  const isLogin = adminState.authMode === 'login';
   return `
     ${themeStyles}
     <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop') center/cover; position: relative;">
-      <div style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);"></div>
-      <div class="auth-card dark-card animate-fade-in" style="width: 100%; max-width: 400px; text-align: center; position: relative; z-index: 1;">
-        <h1 style="color: var(--text-main); margin-bottom: 5px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 0 20px var(--accent-glow);">VASTRA<span style="color: var(--accent)">GOD</span> MODE</h1>
-        <p style="color: var(--text-muted); margin-bottom: 30px;">Master Control Terminal</p>
+      <div style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px);"></div>
+      <div class="auth-card dark-card animate-fade-in" style="width: 100%; max-width: 420px; text-align: center; position: relative; z-index: 1; border: 1px solid var(--accent);">
+        <div style="margin-bottom: 30px;">
+          <h1 style="color: var(--text-main); margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1.5px;">VASTRA<span style="color: var(--accent)">GOD</span></h1>
+          <div style="height: 2px; width: 60px; background: var(--accent); margin: 10px auto;"></div>
+          <p style="color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Overlord Terminal Login</p>
+        </div>
         
-        <form id="admin-auth-form" style="display: flex; flex-direction: column; gap: 15px;">
-          ${!isLogin ? `<input type="text" id="admin-name" placeholder="Full Name" required class="dark-input">` : ''}
-          <input type="text" id="admin-mobile" placeholder="Mobile Number" required class="dark-input">
-          ${!isLogin ? `<input type="email" id="admin-email" placeholder="Email Address (Optional)" class="dark-input">` : ''}
-          <input type="password" id="admin-password" placeholder="Master Password" required class="dark-input">
+        <form id="admin-auth-form" style="display: flex; flex-direction: column; gap: 20px;">
+          <div style="text-align: left;">
+            <label style="color: var(--text-muted); font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block;">MOBILE IDENTIFIER</label>
+            <input type="text" id="admin-mobile" placeholder="Enter Mobile Number" required class="dark-input" style="font-size: 16px;">
+          </div>
+          <div style="text-align: left;">
+            <label style="color: var(--text-muted); font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block;">MASTER PASSWORD</label>
+            <input type="password" id="admin-password" placeholder="••••••••" required class="dark-input" style="font-size: 16px;">
+          </div>
           
-          <button type="submit" class="dark-btn" style="margin-top: 10px;">
-            ${isLogin ? 'Authenticate Override' : 'Initialize Master Account'}
+          <button type="submit" class="dark-btn" style="margin-top: 10px; font-size: 15px; height: 50px;">
+            AUTHENTICATE OVERRIDE
           </button>
         </form>
         
-        <p id="admin-error" style="color: var(--danger); margin-top: 15px; font-size: 14px; display: none;"></p>
+        <p id="admin-error" style="color: var(--danger); margin-top: 20px; font-size: 13px; font-family: monospace; display: none; padding: 10px; border: 1px dashed var(--danger); border-radius: 4px;"></p>
         
-        <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
-            <p style="color: var(--text-muted); font-size: 14px;">
-              ${isLogin ? "No access?" : "Already initialized?"} 
-              <a href="#" id="toggle-auth" style="color: var(--accent); text-decoration: none; font-weight: 600;">
-                ${isLogin ? 'Register Master Key' : 'Login Here'}
-              </a>
+        <div style="margin-top: 40px; border-top: 1px solid var(--border); padding-top: 20px;">
+            <p style="color: #475569; font-size: 11px; font-weight: 500;">
+              AUTHORIZED PERSONNEL ONLY. ALL ACTIONS ARE LOGGED.
             </p>
         </div>
       </div>
@@ -142,55 +232,85 @@ const renderTrackingModal = () => {
   const order = adminState.selectedOrder;
   if (!order) return '';
 
-  const assignedAgent = adminState.partners.find(p => p.mobile === order.assignedPartner);
+  const assignedAgent = adminState.partners.find(p => p.mobile === order.assignedPartner || p.mobile === order.deliveryAgent);
+  const customer = adminState.users.find(u => u.mobile === order.userMobile || u.email === order.userEmail);
 
   return `
     <div class="modal-overlay animate-fade-in" id="tracking-modal" style="display: flex;">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width: 800px;">
         <button class="close-btn" id="close-tracking-modal">&times;</button>
-        <h2 style="margin-top: 0; color: white;">Command Center: Order Data</h2>
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <span style="background: rgba(59,130,246,0.2); color: #60a5fa; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid rgba(59,130,246,0.3);">
-                Order ID: #${order._id.substring(order._id.length - 8).toUpperCase()}
+        <h2 style="margin-top: 0; color: white; display: flex; align-items: center; gap: 10px;">
+          <span style="background: var(--accent); padding: 5px 12px; border-radius: 6px; font-size: 14px;">INTEL</span>
+          Order Operation Details
+        </h2>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+            <span style="background: rgba(59,130,246,0.1); color: var(--accent); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; border: 1px solid var(--accent);">
+                ID: ${order._id.toUpperCase()}
             </span>
-            <span style="background: rgba(16,185,129,0.2); color: #34d399; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid rgba(16,185,129,0.3);">
-                Tracking: ${order.trackingId || 'PENDING'}
+            <span style="background: rgba(16,185,129,0.1); color: var(--success); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; border: 1px solid var(--success);">
+                STATUS: ${order.status.toUpperCase()}
             </span>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-            <div style="background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <h4 style="color: var(--text-muted); margin-top: 0; font-size: 12px; text-transform: uppercase;">Customer Target</h4>
-                <div style="color: white; font-weight: 600;">${order.userEmail}</div>
-                <div style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">${order.address || 'Address Unknown'}</div>
-                <div style="color: var(--success); font-weight: bold; margin-top: 10px; font-size: 18px;">₹${order.totalAmount}</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 25px;">
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                <h4 style="color: var(--text-muted); margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Customer Intelligence</h4>
+                <div style="color: white; font-weight: 700; font-size: 16px;">${customer?.name || 'Unknown User'}</div>
+                <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">📞 ${order.userMobile || customer?.mobile || 'No Phone'}</div>
+                <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">📧 ${order.userEmail || customer?.email || 'No Email'}</div>
+                <div style="color: white; font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--border);">📍 ${order.address || 'Standard Address'}</div>
             </div>
             
-            <div style="background: #0f172a; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                <h4 style="color: var(--text-muted); margin-top: 0; font-size: 12px; text-transform: uppercase;">Logistics Fleet Agent</h4>
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                <h4 style="color: var(--text-muted); margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Fleet Deployment</h4>
                 ${assignedAgent ? `
-                    <div style="color: white; font-weight: 600;">${assignedAgent.name}</div>
-                    <div style="color: var(--text-muted); font-size: 13px;">${assignedAgent.mobile}</div>
-                    <div style="color: var(--warning); font-weight: bold; margin-top: 10px; font-size: 14px;">Payout: ₹${order.partnerPayout || 0}</div>
-                ` : `<div style="color: var(--danger); font-weight: bold; margin-top: 10px;">Unassigned</div>`}
+                    <div style="color: white; font-weight: 700; font-size: 16px;">${assignedAgent.name}</div>
+                    <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">📞 ${assignedAgent.mobile}</div>
+                    <div style="color: var(--warning); font-weight: bold; margin-top: 10px; font-size: 14px; background: rgba(245,158,11,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block;">Payout: ₹${order.partnerPayout || 0}</div>
+                ` : `<div style="color: var(--danger); font-weight: bold; margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                      <span style="display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:50%; animate: pulse 1s infinite;"></span>
+                      UNASSIGNED
+                    </div>`}
             </div>
         </div>
 
-        <h4 style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 10px;">Live Tracking Satellite uplink</h4>
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px;">
+            <h4 style="color: var(--text-muted); margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Inventory Manifest</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                ${order.items && order.items.length > 0 ? order.items.map(item => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div>
+                            <div style="color: white; font-weight: 600;">${item.itemName} (${item.quantity}x)</div>
+                            <div style="color: var(--text-muted); font-size: 11px;">${item.serviceName}</div>
+                        </div>
+                        <div style="color: var(--success); font-weight: bold;">₹${item.price * item.quantity}</div>
+                    </div>
+                `).join('') : `
+                    <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 10px;">No manifest items listed.</div>
+                `}
+            </div>
+            <div style="margin-top: 15px; text-align: right; padding-top: 15px; border-top: 1px solid var(--border);">
+                <span style="color: var(--text-muted); margin-right: 15px;">TOTAL GROSS VALUE:</span>
+                <span style="color: var(--success); font-size: 20px; font-weight: 900;">₹${order.totalAmount}</span>
+            </div>
+        </div>
+
+        <h4 style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;">Satellite Link - Live Tracking</h4>
         ${order.currentLocation && order.currentLocation.lat ? `
-            <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--accent); box-shadow: 0 0 15px rgba(59,130,246,0.3);">
+            <div style="border-radius: 12px; overflow: hidden; border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(59,130,246,0.3);">
                 <iframe 
                     width="100%" 
-                    height="250" 
+                    height="300" 
                     frameborder="0" 
                     style="border:0"
                     src="https://maps.google.com/maps?q=${order.currentLocation.lat},${order.currentLocation.lng}&z=15&output=embed" allowfullscreen>
                 </iframe>
             </div>
         ` : `
-            <div style="background: #0f172a; border: 1px dashed var(--border); padding: 30px; text-align: center; border-radius: 12px; color: var(--text-muted);">
-                <div style="font-size: 30px; margin-bottom: 10px;">📡</div>
-                No active tracking signal detected for this order.
+            <div style="background: #0f172a; border: 2px dashed var(--border); padding: 40px; text-align: center; border-radius: 12px; color: var(--text-muted);">
+                <div style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;">📡</div>
+                OFFLINE - No active tracking beacon found.
             </div>
         `}
       </div>
@@ -265,37 +385,47 @@ const renderRegisterModal = () => {
 // --- Main Views ---
 const renderSidebar = () => {
   return `
-      <aside style="width: 260px; background: var(--bg-card); border-right: 1px solid var(--border); height: 100vh; position: fixed; overflow-y: auto; display: flex; flex-direction: column; z-index: 20;">
-        <div style="padding: 24px; border-bottom: 1px solid var(--border);">
-          <h2 style="color: var(--text-main); font-size: 20px; font-weight: 800; margin: 0; text-shadow: 0 0 10px var(--accent-glow);">VASTRA<span style="color: var(--accent)">GOD</span></h2>
-          <p style="font-size: 12px; color: var(--danger); margin-top: 4px; display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:50%; box-shadow: 0 0 8px var(--danger);"></span> Overlord Access</p>
+      <aside class="sidebar ${adminState.sidebarOpen ? 'open' : ''}" style="width: var(--sidebar-width); background: var(--bg-card); border-right: 1px solid var(--border); height: 100vh; position: fixed; overflow-y: auto; display: flex; flex-direction: column; z-index: 90;">
+        <div style="padding: 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <h2 style="color: var(--text-main); font-size: 20px; font-weight: 800; margin: 0; text-shadow: 0 0 10px var(--accent-glow);">VASTRA<span style="color: var(--accent)">GOD</span></h2>
+            <p style="font-size: 10px; color: var(--danger); margin-top: 4px; display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:6px; height:6px; background:var(--danger); border-radius:50%; box-shadow: 0 0 6px var(--danger);"></span> OVERLORD ACCESS</p>
+          </div>
+          <button class="hamburger" id="close-sidebar" style="display: none;">&times;</button>
         </div>
         <nav style="flex: 1; padding: 15px 0; display: flex; flex-direction: column; gap: 5px;">
-            <a href="#" class="sidebar-link ${adminState.view === 'dashboard' ? 'active' : ''}" data-view="dashboard" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: ${adminState.view === 'dashboard' ? 'white' : 'var(--text-muted)'}; text-decoration: none; font-size: 14px; background: ${adminState.view === 'dashboard' ? 'rgba(59, 130, 246, 0.15)' : 'transparent'}; border-left: 3px solid ${adminState.view === 'dashboard' ? 'var(--accent)' : 'transparent'};">
+            <a href="#" class="sidebar-link ${adminState.view === 'dashboard' ? 'active' : ''}" data-view="dashboard" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
               <span style="font-size: 16px;">📊</span> Command Center
             </a>
-            <a href="#" class="sidebar-link ${adminState.view === 'users' ? 'active' : ''}" data-view="users" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: ${adminState.view === 'users' ? 'white' : 'var(--text-muted)'}; text-decoration: none; font-size: 14px; background: ${adminState.view === 'users' ? 'rgba(59, 130, 246, 0.15)' : 'transparent'}; border-left: 3px solid ${adminState.view === 'users' ? 'var(--accent)' : 'transparent'};">
+            <a href="#" class="sidebar-link ${adminState.view === 'users' ? 'active' : ''}" data-view="users" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
               <span style="font-size: 16px;">👥</span> User Database
             </a>
-            <a href="#" class="sidebar-link ${adminState.view === 'finance' ? 'active' : ''}" data-view="finance" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: ${adminState.view === 'finance' ? 'white' : 'var(--text-muted)'}; text-decoration: none; font-size: 14px; background: ${adminState.view === 'finance' ? 'rgba(59, 130, 246, 0.15)' : 'transparent'}; border-left: 3px solid ${adminState.view === 'finance' ? 'var(--accent)' : 'transparent'};">
+            <a href="#" class="sidebar-link ${adminState.view === 'finance' ? 'active' : ''}" data-view="finance" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
               <span style="font-size: 16px;">💰</span> Transact Ledger
+            </a>
+            <a href="#" class="sidebar-link ${adminState.view === 'logistics' ? 'active' : ''}" data-view="logistics" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
+              <span style="font-size: 16px;">🛵</span> Logistics Core
             </a>
         </nav>
         <div style="padding: 24px; border-top: 1px solid var(--border);">
             <button id="admin-logout-btn" style="width: 100%; padding: 12px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">Secure Logout</button>
         </div>
       </aside>
+      ${adminState.sidebarOpen ? `<div id="sidebar-overlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 80;"></div>` : ''}
     `;
 };
 
 const renderTopBar = () => {
-  const titles = { 'dashboard': 'Command Center (Orders)', 'users': 'Master Database (Users)', 'finance': 'Financial Ledger' };
+  const titles = { 'dashboard': 'Command Center', 'users': 'Master Database', 'finance': 'Financial Ledger', 'logistics': 'Logistics Fleet Intel' };
   return `
-          <header style="height: 70px; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; position: sticky; top: 0; z-index: 10;">
-              <h2 style="font-size: 18px; color: var(--text-main); font-weight: 600;">${titles[adminState.view]}</h2>
-              <div style="display: flex; gap: 15px; align-items: center;">
-                  <button id="refresh-data-btn" class="dark-btn" style="padding: 8px 15px; width: auto; font-size: 12px; background: transparent; border: 1px solid var(--accent); color: var(--accent);">⟳ Sync Database</button>
-                  <span style="font-size: 14px; color: var(--danger); font-weight: bold;">OVERLORD: ${adminState.user.name.toUpperCase()}</span>
+          <header style="height: 70px; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; position: sticky; top: 0; z-index: 10;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                  <button class="hamburger" id="sidebar-toggle">☰</button>
+                  <h2 style="font-size: 16px; color: var(--text-main); font-weight: 600; margin: 0;">${titles[adminState.view]}</h2>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                  <button id="refresh-data-btn" class="dark-btn" style="padding: 6px 10px; width: auto; font-size: 11px; background: transparent; border: 1px solid var(--accent); color: var(--accent);">⟳ Sync</button>
+                  <span id="user-badge" style="font-size: 11px; color: var(--danger); font-weight: bold; border: 1px solid var(--danger); padding: 4px 8px; border-radius: 4px;">${adminState.user.name.split(' ')[0].toUpperCase()}</span>
               </div>
           </header>
       `;
@@ -303,71 +433,96 @@ const renderTopBar = () => {
 
 const renderDashboardView = () => {
   return `
-      <div style="padding: 30px;" class="animate-fade-in">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 30px;">
-           <div class="dark-card" style="border-top: 4px solid var(--accent); padding: 20px;">
-              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight: bold;">Total Orders</div>
-              <div style="font-size: 36px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.length}</div>
+      <div style="padding: 20px;" class="animate-fade-in">
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
+           <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 15px;">
+              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Total Orders</div>
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.length}</div>
            </div>
-           <div class="dark-card" style="border-top: 4px solid var(--warning); padding: 20px;">
-              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight: bold;">Pending Actions</div>
-              <div style="font-size: 36px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => o.status === 'Pending' || o.status === 'Order Received').length}</div>
+           <div class="dark-card" style="border-left: 4px solid var(--warning); padding: 15px;">
+              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Pending Actions</div>
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => o.status === 'Pending' || o.status === 'Order Received').length}</div>
            </div>
-           <div class="dark-card" style="border-top: 4px solid var(--success); padding: 20px;">
-              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight: bold;">Completed Volume</div>
-              <div style="font-size: 36px; font-weight: 800; color: white; margin-top: 5px;">₹${adminState.orders.filter(o => o.status === 'Completed').reduce((sum, o) => sum + (o.totalAmount || 0), 0)}</div>
+           <div class="dark-card" style="border-left: 4px solid var(--success); padding: 15px;">
+              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Revenue</div>
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">₹${adminState.orders.filter(o => o.status === 'Completed').reduce((sum, o) => sum + (o.totalAmount || 0), 0)}</div>
            </div>
         </div>
 
         <div class="dark-card" style="padding: 0; overflow: hidden;">
-            <div style="padding: 20px; border-bottom: 1px solid var(--border); background: #0f172a; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 16px;">Active Order Operations</h3>
-                <span style="font-size: 12px; color: var(--text-muted);">Click any row to open Satellite Radar</span>
+            <div style="padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0f172a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0; font-size: 15px;">Active Order Operations</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="bulk-partner-id" class="dark-input" style="padding: 6px; font-size: 11px; width: 160px;">
+                        <option value="">-- Bulk Assign Agent --</option>
+                        ${adminState.partners.map(p => {
+    const areas = p.savedAddresses?.map(a => a.text).join(', ') || 'Global';
+    return `<option value="${p.mobile}">${p.name} [${p.mobile}] (${areas})</option>`;
+  }).join('')}
+                    </select>
+                    <button id="bulk-assign-btn" class="dark-btn" style="padding: 6px 12px; width: auto; font-size: 11px;">Assign Selected</button>
+                    <span style="font-size: 11px; color: var(--text-muted);">${adminState.selectedOrderIds.length} Selected</span>
+                </div>
             </div>
+            <div class="responsive-table-container">
             ${adminState.orders.length === 0 ? '<div style="padding: 40px; text-align: center; color: var(--text-muted);">No orders found in database.</div>' : `
                 <table style="width: 100%;">
                     <thead>
                         <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="select-all-orders" ${adminState.selectedOrderIds.length === adminState.orders.length && adminState.orders.length > 0 ? 'checked' : ''}></th>
                             <th>Order Target</th>
+                            <th>Address / Area</th>
                             <th>Status Vector</th>
                             <th>Logistics Assignment</th>
-                            <th>Gross Value</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${adminState.orders.map(order => `
+                        ${adminState.orders
+        .sort((a, b) => {
+          const statusOrder = { 'Pending': 0, 'Order Received': 0, 'Assigned': 1, 'Processing': 1, 'Washing': 1, 'Ironing': 1, 'Out for Delivery': 1, 'Completed': 2, 'Cancelled': 2 };
+          return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+        })
+        .map(order => `
                             <tr class="clickable order-row" data-id="${order._id}">
-                                <td>
-                                    <strong style="color: white; display: block;">${order.userEmail}</strong>
-                                    <span style="color: var(--text-muted); font-size: 12px; font-family: monospace;">UUID: ${order._id.substring(order._id.length - 8)}</span>
+                                <td onclick="event.stopPropagation();">
+                                    <input type="checkbox" class="order-select" data-id="${order._id}" ${adminState.selectedOrderIds.includes(order._id) ? 'checked' : ''}>
                                 </td>
                                 <td>
-                                    <span style="background: ${order.status === 'Completed' ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)'}; color: ${order.status === 'Completed' ? '#34d399' : '#60a5fa'}; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                    <strong style="color: white; display: block;">${order.userEmail || order.userMobile}</strong>
+                                    <span style="color: var(--text-muted); font-size: 12px; font-family: monospace;">UUID: ${order._id.substring(order._id.length - 8)}</span>
+                                </td>
+                                <td style="max-width: 200px; font-size: 12px; color: var(--text-main);">
+                                    ${order.address || '<span style="color: var(--danger);">No Address</span>'}
+                                </td>
+                                <td>
+                                    <span style="background: ${order.status === 'Completed' ? 'rgba(16,185,129,0.2)' : order.status === 'Pending' || order.status === 'Order Received' ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.2)'}; color: ${order.status === 'Completed' ? '#34d399' : order.status === 'Pending' || order.status === 'Order Received' ? '#fbbf24' : '#60a5fa'}; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
                                         ${order.status.toUpperCase()}
                                     </span>
                                 </td>
                                 <td onclick="event.stopPropagation();">
                                    ${order.status === 'Pending' || order.status === 'Order Received' ? `
                                       <div style="display: flex; gap: 5px;">
-                                          <select id="partner-id-${order._id}" class="dark-input" style="padding: 6px; font-size: 12px; width: 140px;">
+                                          <select id="partner-id-${order._id}" class="dark-input" style="padding: 6px; font-size: 11px; width: 160px;">
                                             <option value="">-- Target Fleet --</option>
-                                            ${adminState.partners.map(p => `<option value="${p.mobile}">${p.name} [${p.mobile}]</option>`).join('')}
+                                            ${adminState.partners.map(p => {
+          const areas = p.savedAddresses?.map(a => a.text).join(', ') || 'Global';
+          return `<option value="${p.mobile}">${p.name} [${p.mobile}] (${areas})</option>`;
+        }).join('')}
                                           </select>
-                                          <input type="number" id="payout-${order._id}" placeholder="₹ Pay" class="dark-input" style="padding: 6px; font-size: 12px; width: 70px;">
                                           <button class="dark-btn assign-btn" data-id="${order._id}" style="padding: 6px 10px; font-size: 12px; width: auto;">Lock</button>
                                       </div>
                                   ` : `
                                       <div style="font-size: 13px;">
                                         <div style="font-weight: bold; color: white;">${adminState.partners.find(p => p.mobile === order.assignedPartner)?.name || order.assignedPartner || 'Unknown'}</div>
-                                        <div style="color: var(--success);">Pay: ₹${order.partnerPayout || 0}</div>
+                                        <div style="color: var(--text-muted); font-size: 11px;">Agent ID: ${order.assignedPartner}</div>
                                       </div>
                                   `}
                                 </td>
-                                <td><strong style="font-size: 16px; color: var(--success);">₹${order.totalAmount}</strong></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
+            </div>
             `}
         </div>
       </div>
@@ -389,50 +544,170 @@ const renderUsersView = () => {
           </div>
 
           <div class="dark-card" style="padding: 0; overflow: hidden;">
-             <table style="width: 100%;">
-                 <thead>
-                     <tr>
-                         <th>Entity Classification</th>
-                         <th>Contact Vectors</th>
-                         <th>Wallet Data</th>
-                         <th>Role Flag</th>
-                     </tr>
-                 </thead>
-                 <tbody>
-                     ${displayList.length === 0 ? `<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">No entities located.</td></tr>` : displayList.map(user => `
-                         <tr class="clickable user-row" data-id="${user._id}">
-                             <td>
-                                 <strong style="color: white; display: block; font-size: 15px;">${user.name}</strong>
-                                 <span style="color: var(--text-muted); font-size: 11px;">Join: ${new Date(user.createdAt).toLocaleDateString()}</span>
-                             </td>
-                             <td>
-                                 <div style="color: var(--text-main);">${user.mobile}</div>
-                                 <div style="color: var(--text-muted); font-size: 12px;">${user.email || 'No email target'}</div>
-                             </td>
-                             <td>
-                                 <strong style="font-size: 16px; color: var(--success); text-shadow: 0 0 5px rgba(16,185,129,0.3);">₹${user.walletBalance || 0}</strong>
-                             </td>
-                             <td>
-                                 <span style="background: rgba(255,255,255,0.1); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase;">${user.role}</span>
-                             </td>
-                         </tr>
-                     `).join('')}
-                 </tbody>
-             </table>
+             <div class="responsive-table-container">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Entity Classification</th>
+                            <th>Contact Vectors</th>
+                            <th>Wallet Data</th>
+                            <th>Role Flag</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${displayList.length === 0 ? `<tr><td colspan="4" style="text-align:center; padding: 40px; color: var(--text-muted);">No entities located.</td></tr>` : displayList.map(user => `
+                            <tr class="clickable user-row" data-id="${user._id}">
+                                <td>
+                                    <strong style="color: white; display: block; font-size: 14px;">${user.name}</strong>
+                                    <span style="color: var(--text-muted); font-size: 10px;">Joined: ${new Date(user.createdAt).toLocaleDateString()}</span>
+                                </td>
+                                <td>
+                                    <div style="color: var(--text-main); font-size: 13px;">${user.mobile}</div>
+                                    <div style="color: var(--text-muted); font-size: 11px;">${user.email || 'No email target'}</div>
+                                </td>
+                                <td>
+                                    <strong style="font-size: 15px; color: var(--success);">₹${user.walletBalance || 0}</strong>
+                                </td>
+                                <td>
+                                    <span style="background: rgba(255,255,255,0.1); color: white; padding: 3px 6px; border-radius: 4px; font-size: 10px; text-transform: uppercase;">${user.role}</span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+             </div>
+          </div>
+       </div>
+    `;
+};
+
+const renderLogisticsView = () => {
+  const partners = adminState.partners;
+
+  return `
+       <div style="padding: 20px;" class="animate-fade-in">
+          <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
+             <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 15px;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Fleet Size</div>
+                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${partners.length} Agents</div>
+             </div>
+             <div class="dark-card" style="border-left: 4px solid var(--success); padding: 15px;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Active Deployments</div>
+                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => o.assignedPartner).length}</div>
+             </div>
+             <div class="dark-card" style="border-left: 4px solid var(--danger); padding: 15px;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Unassigned</div>
+                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => !o.assignedPartner && o.status !== 'Completed').length}</div>
+             </div>
+          </div>
+
+          <div class="dark-card" style="padding: 0; overflow: hidden;">
+              <div style="padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0f172a;">
+                  <h3 style="margin: 0; font-size: 15px;">Logistics Fleet Personnel</h3>
+              </div>
+              <div style="padding: 10px;">
+                  ${partners.length === 0 ? '<div style="padding: 40px; text-align: center; color: var(--text-muted);">No fleet agents registered.</div>' : partners.map(p => {
+    const agentOrders = adminState.orders.filter(o => o.assignedPartner === p.mobile);
+    const hasOrders = agentOrders.length > 0;
+    return `
+                      <div class="dark-card" style="margin-bottom: 10px; padding: 0; border: 1px solid ${hasOrders ? 'var(--accent)' : 'var(--border)'};">
+                          <div style="padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                              <div>
+                                  <div style="font-weight: bold; color: white; font-size: 15px;">${p.name}</div>
+                                  <div style="color: var(--text-muted); font-size: 12px;">Mobile: ${p.mobile}</div>
+                              </div>
+                              <div style="text-align: right;">
+                                  <div style="color: ${hasOrders ? 'var(--accent)' : 'var(--text-muted)'}; font-weight: 800; font-size: 18px;">${agentOrders.length}</div>
+                                  <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Orders Assigned</div>
+                              </div>
+                          </div>
+                          ${hasOrders ? `
+                              <div style="background: rgba(15, 23, 42, 0.5); border-top: 1px solid var(--border); padding: 10px;">
+                                  <table style="width: 100%; font-size: 12px;">
+                                      <thead>
+                                          <tr style="color: var(--text-muted); border-bottom: 1px solid var(--border);">
+                                              <th style="text-align: left; padding: 5px;">Target</th>
+                                              <th style="text-align: left; padding: 5px;">Status</th>
+                                              <th style="text-align: right; padding: 5px;">Action</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          ${agentOrders.map(o => `
+                                              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                                  <td style="padding: 8px 5px;">
+                                                      <div style="color: white; font-weight: 600;">${o.userEmail || o.userMobile}</div>
+                                                      <div style="font-size: 10px; opacity: 0.6;">${o._id.substring(o._id.length - 8)}</div>
+                                                  </td>
+                                                  <td style="padding: 8px 5px;">
+                                                      <span class="status-pill ${o.status === 'Completed' ? 'status-completed' : 'status-assigned'}">${o.status}</span>
+                                                  </td>
+                                                  <td style="padding: 8px 5px; text-align: right;">
+                                                      <button class="dark-btn order-row" data-id="${o._id}" style="padding: 4px 8px; font-size: 10px; width: auto;">Details</button>
+                                                  </td>
+                                              </tr>
+                                          `).join('')}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          ` : ''}
+                      </div>
+                    `;
+  }).join('')}
+              </div>
           </div>
        </div>
     `;
 };
 
 const renderFinanceView = () => {
+  const totalWallet = adminState.users.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
+  const totalCoins = adminState.users.reduce((sum, u) => sum + (u.vastraCoins || 0), 0);
+
   return `
-       <div style="padding: 30px;" class="animate-fade-in">
-          <h2 style="margin-bottom: 20px;">Financial Ledger Control</h2>
-          <div class="dark-card">
-              <p style="color: var(--text-muted); text-align: center; padding: 50px;">
-                 <span style="font-size: 40px; display: block; margin-bottom: 10px;">🏦</span>
-                 Master Ledger Module active. To execute financial overrides, access the specific entity profile via the <b>User Database</b> tab and engage Wallet Override protocols.
-              </p>
+       <div style="padding: 20px;" class="animate-fade-in">
+          <h2 style="margin-bottom: 20px; font-size: 20px; color: white;">Vastra Financial Ledger</h2>
+          
+          <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px;">
+             <div class="dark-card" style="border-left: 4px solid var(--success); padding: 15px;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">System Total Wallet</div>
+                <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">₹${totalWallet.toLocaleString()}</div>
+             </div>
+             <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 15px;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">System Total Coins</div>
+                <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${totalCoins.toLocaleString()}</div>
+             </div>
+          </div>
+
+          <div class="dark-card" style="padding: 0; overflow: hidden;">
+              <div style="padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0f172a; display: flex; justify-content: space-between; align-items: center;">
+                  <h3 style="margin: 0; font-size: 15px;">Critical Wallet Exceptions</h3>
+                  <span style="font-size: 11px; color: var(--text-muted);">Users with Balance > 0</span>
+              </div>
+              <div class="responsive-table-container">
+                  <table style="width: 100%;">
+                      <thead>
+                          <tr>
+                              <th>Subject</th>
+                              <th>Account Balance</th>
+                              <th>Coins Balance</th>
+                              <th>Auth Role</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          ${adminState.users.filter(u => (u.walletBalance || 0) > 0 || (u.vastraCoins || 0) > 0).map(u => `
+                              <tr>
+                                  <td>
+                                      <div style="color: white; font-weight: 600;">${u.name}</div>
+                                      <div style="color: var(--text-muted); font-size: 11px;">${u.mobile}</div>
+                                  </td>
+                                  <td><strong style="color: var(--success);">₹${u.walletBalance || 0}</strong></td>
+                                  <td><strong style="color: var(--accent);">${u.vastraCoins || 0}</strong></td>
+                                  <td><span style="font-size: 10px; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">${u.role.toUpperCase()}</span></td>
+                              </tr>
+                          `).join('')}
+                      </tbody>
+                  </table>
+              </div>
           </div>
        </div>
     `;
@@ -452,12 +727,13 @@ const renderApp = () => {
       ${themeStyles}
       <div style="display: flex; background: var(--bg-dark); min-height: 100vh;">
         ${renderSidebar()}
-        <div style="flex: 1; margin-left: 260px;">
+        <div class="main-content" style="flex: 1; margin-left: var(--sidebar-width); width: 100%;">
           ${renderTopBar()}
           <div>
               ${adminState.view === 'dashboard' ? renderDashboardView() :
       adminState.view === 'users' ? renderUsersView() :
-        renderFinanceView()
+        adminState.view === 'finance' ? renderFinanceView() :
+          renderLogisticsView()
     }
           </div>
         </div>
@@ -535,8 +811,24 @@ const attachAppEvents = () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       adminState.view = e.currentTarget.dataset.view;
+      adminState.sidebarOpen = false; // Close on navigation
       renderApp();
     });
+  });
+
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    adminState.sidebarOpen = true;
+    renderApp();
+  });
+
+  document.getElementById('close-sidebar')?.addEventListener('click', () => {
+    adminState.sidebarOpen = false;
+    renderApp();
+  });
+
+  document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
+    adminState.sidebarOpen = false;
+    renderApp();
   });
 
   document.getElementById('admin-logout-btn')?.addEventListener('click', () => {
@@ -555,23 +847,75 @@ const attachAppEvents = () => {
     btn.addEventListener('click', async (e) => {
       const orderId = e.target.dataset.id;
       const partnerId = document.getElementById(`partner-id-${orderId}`).value.trim();
-      const payout = parseFloat(document.getElementById(`payout-${orderId}`).value);
 
-      if (!partnerId || isNaN(payout) || payout < 0) {
-        alert('CRITICAL: Malformed assignment target or payout data.'); return;
+      if (!partnerId) {
+        showCustomAlert('Assignment Failed', 'CRITICAL: Malformed assignment target.', 'error');
+        return;
       }
 
       e.target.innerText = '...';
       e.target.disabled = true;
       try {
-        await api.assignOrder(orderId, partnerId, payout);
+        await api.assignOrder(orderId, partnerId);
         await parallelFetchData();
         renderApp();
+        showCustomAlert('Success', 'Order successfully assigned to agent.', 'success');
       } catch (error) {
-        alert('Execute Failed: ' + error.message);
+        showCustomAlert('Execute Failed', error.message, 'error');
         e.target.innerText = 'Lock'; e.target.disabled = false;
       }
     });
+  });
+
+  // Bulk Selection Logic
+  document.getElementById('select-all-orders')?.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      adminState.selectedOrderIds = adminState.orders.map(o => o._id);
+    } else {
+      adminState.selectedOrderIds = [];
+    }
+    renderApp();
+  });
+
+  document.querySelectorAll('.order-select').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) {
+        if (!adminState.selectedOrderIds.includes(id)) adminState.selectedOrderIds.push(id);
+      } else {
+        adminState.selectedOrderIds = adminState.selectedOrderIds.filter(oid => oid !== id);
+      }
+      renderApp();
+    });
+  });
+
+  // Bulk Assignment Execution
+  document.getElementById('bulk-assign-btn')?.addEventListener('click', async (e) => {
+    const partnerId = document.getElementById('bulk-partner-id').value;
+    if (!partnerId) {
+      showCustomAlert('Missing Data', 'Select a logistics agent for bulk assignment.', 'error');
+      return;
+    }
+    if (adminState.selectedOrderIds.length === 0) {
+      showCustomAlert('No Selection', 'Select at least one order to assign.', 'error');
+      return;
+    }
+
+    e.target.innerText = 'ASSIGNING...';
+    e.target.disabled = true;
+
+    try {
+      await api.bulkAssignOrders(adminState.selectedOrderIds, partnerId);
+      adminState.selectedOrderIds = [];
+      await parallelFetchData();
+      showToast("BULK ASSIGNMENT COMPLETED");
+      renderApp();
+      showCustomAlert('Bulk Success', 'All selected orders have been assigned to ' + partnerId, 'success');
+    } catch (err) {
+      showCustomAlert("Bulk Assignment Failed", err.message, 'error');
+      e.target.innerText = 'Assign Selected';
+      e.target.disabled = false;
+    }
   });
 
   // Tracking Modal Trigger
@@ -629,11 +973,20 @@ const attachAppEvents = () => {
       // Update Wallet
       await api.adminUpdateWallet(user._id, newWallet);
 
+      // Local Update for immediate feedback
+      const uIndex = adminState.users.findIndex(u => u._id === user._id);
+      if (uIndex !== -1) {
+        adminState.users[uIndex] = { ...adminState.users[uIndex], name, mobile, walletBalance: newWallet };
+      }
+
+      showToast("MASTER OVERRIDE SUCCESSFUL");
       adminState.selectedUser = null;
-      await parallelFetchData();
       renderApp();
+
+      // Refresh in background to stay in sync with server
+      parallelFetchData().then(() => renderApp());
     } catch (err) {
-      alert("Override Failed: " + err.message);
+      showToast("OVERRIDE FAILED: " + err.message);
       btn.innerText = 'Save Master Override';
       btn.disabled = false;
     }
@@ -669,10 +1022,11 @@ const attachAppEvents = () => {
       adminState.showRegisterModal = false;
       await parallelFetchData();
       renderApp();
-      alert("Entity sequence deployed successfully.");
+      showCustomAlert('Success', 'Entity sequence deployed successfully.', 'success');
     } catch (err) {
-      alert("Deployment Failed: " + err.message);
-      btn.innerText = 'Execute Deployment';
+      showCustomAlert('Registration Failed', err.message, 'error');
+    } finally {
+      btn.innerText = 'Create Overlord Account';
       btn.disabled = false;
     }
   });

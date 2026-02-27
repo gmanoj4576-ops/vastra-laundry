@@ -1,7 +1,7 @@
 import '/style.css';
 import { api } from '../api.js';
 
-const partnerState = {
+const logisticsState = {
   user: null,
   authMode: 'login', // 'login' or 'signup'
   orders: [],
@@ -16,7 +16,7 @@ const themeStyles = `
       --bg-card: #1e293b;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --accent: #10b981; /* Emerald green accent for partners */
+      --accent: #10b981; /* Emerald green accent for logistics */
       --accent-glow: rgba(16, 185, 129, 0.4);
       --border: #334155;
       --warning: #f59e0b;
@@ -122,28 +122,28 @@ const themeStyles = `
 
 // Login/Signup UI
 const renderAuth = () => {
-  const isLogin = partnerState.authMode === 'login';
+  const isLogin = logisticsState.authMode === 'login';
   return `
       ${themeStyles}
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: url('https://images.unsplash.com/photo-1587820792019-33bde14457ae?q=80&w=2070&auto=format&fit=crop') center/cover; position: relative;">
         <div style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);"></div>
         
         <div class="auth-card dark-card animate-fade-in" style="width: 100%; max-width: 400px; text-align: center; position: relative; z-index: 1;">
-          <h1 style="color: var(--text-main); margin-bottom: 5px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 0 20px var(--accent-glow);">VASTRA<span style="color: var(--accent)">PARTNER</span></h1>
+          <h1 style="color: var(--text-main); margin-bottom: 5px; font-weight: 800; letter-spacing: -1px; text-shadow: 0 0 20px var(--accent-glow);">VASTRA<span style="color: var(--accent)">LOGISTICS</span></h1>
           <p style="color: var(--text-muted); margin-bottom: 30px;">Field Operations Portal</p>
           
-          <form id="partner-auth-form" style="display: flex; flex-direction: column; gap: 15px;">
-            ${!isLogin ? `<input type="text" id="partner-name" placeholder="Full Legal Name" required class="dark-input">` : ''}
-            <input type="text" id="partner-mobile" placeholder="Mobile Number" required class="dark-input">
-            ${!isLogin ? `<input type="email" id="partner-email" placeholder="Email Address (Optional)" class="dark-input">` : ''}
-            <input type="password" id="partner-password" placeholder="Passcode" required class="dark-input">
+          <form id="logistics-auth-form" style="display: flex; flex-direction: column; gap: 15px;">
+            ${!isLogin ? `<input type="text" id="logistics-name" placeholder="Full Legal Name" required class="dark-input">` : ''}
+            <input type="text" id="logistics-mobile" placeholder="Mobile Number" required class="dark-input">
+            ${!isLogin ? `<input type="email" id="logistics-email" placeholder="Email Address (Optional)" class="dark-input">` : ''}
+            <input type="password" id="logistics-password" placeholder="Passcode" required class="dark-input">
             
             <button type="submit" class="dark-btn" style="margin-top: 10px;">
               ${isLogin ? 'Initialize Session' : 'Apply as Operator'}
             </button>
           </form>
           
-          <p id="partner-error" style="color: var(--danger); margin-top: 15px; font-size: 14px; display: none;"></p>
+          <p id="logistics-error" style="color: var(--danger); margin-top: 15px; font-size: 14px; display: none;"></p>
           
           <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
               <p style="color: var(--text-muted); font-size: 14px;">
@@ -160,26 +160,26 @@ const renderAuth = () => {
 
 // Dashboard UI
 const renderDashboard = () => {
-  const newOrders = partnerState.orders.filter(o => o.status === 'Assigned' || o.status === 'Pending');
-  const earnings = partnerState.orders
+  const newOrders = logisticsState.orders.filter(o => o.status === 'Assigned' || o.status === 'Pending');
+  const earnings = logisticsState.orders
     .filter(o => o.status === 'Completed')
     .reduce((acc, order) => acc + (order.partnerPayout || 0), 0);
-  const activeJobs = partnerState.orders.filter(o => ['Processing', 'Washing', 'Ironing', 'Out for Delivery'].includes(o.status));
+  const activeJobs = logisticsState.orders.filter(o => ['Processing', 'Washing', 'Ironing', 'Out for Delivery'].includes(o.status));
 
   return `
         ${themeStyles}
         <div class="dashboard-container animate-fade-in" style="padding: 20px; max-width: 1000px; margin: 0 auto;">
             <header style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px;">
               <div style="h2">
-                <h2 style="color: var(--text-main); font-weight: 800; margin: 0; text-shadow: 0 0 10px var(--accent-glow);">VASTRA<span style="color: var(--accent)">PARTNER</span></h2>
+                <h2 style="color: var(--text-main); font-weight: 800; margin: 0; text-shadow: 0 0 10px var(--accent-glow);">VASTRA<span style="color: var(--accent)">LOGISTICS</span></h2>
                 <div style="display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 13px; color: var(--accent);">
                     <span style="display:inline-block; width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow: 0 0 8px var(--accent);"></span>
                     Ready for duty
                 </div>
               </div>
               <div style="display: flex; align-items: center; gap: 15px;">
-                  <span style="font-weight: 500; color: var(--text-muted);">Operator: <span style="color: white">${partnerState.user.name.split(' ')[0]}</span></span>
-                  <button id="partner-logout-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: background 0.2s;">Secure Logout</button>
+                  <span style="font-weight: 500; color: var(--text-muted);">Operator: <span style="color: white">${logisticsState.user.name.split(' ')[0]}</span></span>
+                  <button id="logistics-logout-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: background 0.2s;">Secure Logout</button>
               </div>
             </header>
             
@@ -197,14 +197,14 @@ const renderDashboard = () => {
                   <p style="font-size: 32px; font-weight: 800; color: #60a5fa; margin-top: 10px;">$${earnings.toFixed(2)}</p>
                 </div>
               </div>
-
+ 
               <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 50px; margin-bottom: 20px;">
                  <h2 style="font-weight: 600;">Active Directives</h2>
-                 <button id="partner-refresh-btn" class="dark-btn" style="width: auto; padding: 10px 20px; font-size: 14px;">Sync Terminal</button>
+                 <button id="logistics-refresh-btn" class="dark-btn" style="width: auto; padding: 10px 20px; font-size: 14px;">Sync Terminal</button>
               </div>
-
+ 
               <div class="table-wrapper dark-card" style="padding: 0; overflow-x: auto;">
-              ${partnerState.orders.length === 0 ? '<p style="padding: 30px; text-align: center; color: var(--text-muted);">No assignments matching operative code.</p>' : `
+              ${logisticsState.orders.length === 0 ? '<p style="padding: 30px; text-align: center; color: var(--text-muted);">No assignments matching operative code.</p>' : `
                       <table style="min-width: 700px;">
                           <thead>
                               <tr>
@@ -215,7 +215,7 @@ const renderDashboard = () => {
                               </tr>
                           </thead>
                           <tbody>
-                              ${partnerState.orders.map(order => `
+                              ${logisticsState.orders.map(order => `
                                   <tr>
                                       <td>
                                         <div style="color: var(--text-muted); font-size: 12px; margin-bottom: 4px;">${order.date}</div>
@@ -242,8 +242,8 @@ const renderDashboard = () => {
 };
 
 const renderOrderModal = () => {
-  if (!partnerState.activeOrderModal) return '';
-  const order = partnerState.orders.find(o => o._id === partnerState.activeOrderModal);
+  if (!logisticsState.activeOrderModal) return '';
+  const order = logisticsState.orders.find(o => o._id === logisticsState.activeOrderModal);
   if (!order) return '';
 
   const steps = ['Order Received', 'Washing', 'Ironing', 'Ready for Pickup', 'Completed'];
@@ -268,7 +268,7 @@ const renderOrderModal = () => {
                       <span style="color: var(--accent);">$${order.partnerPayout || 0}</span>
                   </div>
               </div>
-
+ 
               <h4 style="margin-bottom: 15px;">Progress Synchronization</h4>
               <div style="display: flex; flex-direction: column; gap: 10px;">
                   ${steps.map((step, idx) => {
@@ -290,10 +290,10 @@ const renderOrderModal = () => {
 };
 
 // App Controller
-const renderPartnerApp = () => {
-  const root = document.querySelector('#partner-app');
+const renderLogisticsApp = () => {
+  const root = document.querySelector('#logistics-app');
 
-  if (!partnerState.user) {
+  if (!logisticsState.user) {
     root.innerHTML = renderAuth();
     attachAuthEvents();
     return;
@@ -306,42 +306,42 @@ const renderPartnerApp = () => {
 const attachAuthEvents = () => {
   document.getElementById('toggle-auth').addEventListener('click', (e) => {
     e.preventDefault();
-    partnerState.authMode = partnerState.authMode === 'login' ? 'signup' : 'login';
-    renderPartnerApp();
+    logisticsState.authMode = logisticsState.authMode === 'login' ? 'signup' : 'login';
+    renderLogisticsApp();
   });
 
-  document.getElementById('partner-auth-form').addEventListener('submit', async (e) => {
+  document.getElementById('logistics-auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const mobile = document.getElementById('partner-mobile').value.trim();
-    const password = document.getElementById('partner-password').value.trim();
-    const errorEl = document.getElementById('partner-error');
+    const mobile = document.getElementById('logistics-mobile').value.trim();
+    const password = document.getElementById('logistics-password').value.trim();
+    const errorEl = document.getElementById('logistics-error');
     const submitBtn = e.target.querySelector('button');
 
     const originalText = submitBtn.innerText;
     submitBtn.innerText = 'Connecting...';
 
     try {
-      if (partnerState.authMode === 'signup') {
-        const name = document.getElementById('partner-name').value.trim();
-        const email = document.getElementById('partner-email').value.trim();
+      if (logisticsState.authMode === 'signup') {
+        const name = document.getElementById('logistics-name').value.trim();
+        const email = document.getElementById('logistics-email').value.trim();
 
-        await api.signup({ name, mobile, password, email, role: 'partner' });
+        await api.signup({ name, mobile, password, email, role: 'logistics' });
         alert('Operator account established. You may now login.');
-        partnerState.authMode = 'login';
-        renderPartnerApp();
+        logisticsState.authMode = 'login';
+        renderLogisticsApp();
         return;
       }
 
       const res = await api.signin({ mobile, password });
-      if (res.user.role !== 'partner') {
+      if (res.user.role !== 'logistics' && res.user.role !== 'partner') {
         throw new Error("Access Denied. You are not registered as an operator.");
       }
 
       errorEl.style.display = 'none';
-      partnerState.user = res.user;
-      partnerState.orders = await api.getPartnerOrders(partnerState.user.mobile);
+      logisticsState.user = res.user;
+      logisticsState.orders = await api.getPartnerOrders(logisticsState.user.mobile);
 
-      renderPartnerApp();
+      renderLogisticsApp();
     } catch (err) {
       submitBtn.innerText = originalText;
       errorEl.innerText = ">> " + (err.message || "Login failed.");
@@ -350,20 +350,56 @@ const attachAuthEvents = () => {
   });
 };
 
+
+// --- Location Tracking logic ---
+let positionWatcher = null;
+
+const startLocationTracking = (orderId) => {
+  if (positionWatcher) return;
+  if (!navigator.geolocation) {
+    console.error('Geolocation not supported');
+    return;
+  }
+
+  console.log('🛰️ Starting Location Tracking for Order:', orderId);
+  positionWatcher = navigator.geolocation.watchPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        await api.updateLocation(orderId, latitude, longitude);
+        console.log('📍 Location Broadcasted:', latitude, longitude);
+      } catch (err) {
+        console.error('Location broadcast failed:', err);
+      }
+    },
+    (err) => console.error('Geolocation error:', err),
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+  );
+};
+
+const stopLocationTracking = () => {
+  if (positionWatcher) {
+    navigator.geolocation.clearWatch(positionWatcher);
+    positionWatcher = null;
+    console.log('🔇 Location Tracking Stopped');
+  }
+};
+
 const attachAppEvents = () => {
-  document.getElementById('partner-logout-btn').addEventListener('click', () => {
-    partnerState.user = null;
-    renderPartnerApp();
+  document.getElementById('logistics-logout-btn').addEventListener('click', () => {
+    stopLocationTracking();
+    logisticsState.user = null;
+    renderLogisticsApp();
   });
 
-  const refreshBtn = document.getElementById('partner-refresh-btn');
+  const refreshBtn = document.getElementById('logistics-refresh-btn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.innerText = 'Syncing...';
       refreshBtn.style.opacity = '0.5';
       try {
-        partnerState.orders = await api.getPartnerOrders(partnerState.user.mobile);
-        renderPartnerApp();
+        logisticsState.orders = await api.getPartnerOrders(logisticsState.user.mobile);
+        renderLogisticsApp();
       } catch (err) {
         alert('Terminal Sync Failed.');
         refreshBtn.innerText = 'Sync Terminal';
@@ -374,15 +410,15 @@ const attachAppEvents = () => {
 
   document.querySelectorAll('.open-order-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      partnerState.activeOrderModal = e.target.dataset.id;
-      renderPartnerApp();
+      logisticsState.activeOrderModal = e.target.dataset.id;
+      renderLogisticsApp();
     });
   });
 
   const closeBtn = document.getElementById('close-modal-btn');
   const backdrop = document.getElementById('order-modal-backdrop');
-  if (closeBtn) closeBtn.addEventListener('click', () => { partnerState.activeOrderModal = null; renderPartnerApp(); });
-  if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) { partnerState.activeOrderModal = null; renderPartnerApp(); } });
+  if (closeBtn) closeBtn.addEventListener('click', () => { logisticsState.activeOrderModal = null; renderLogisticsApp(); });
+  if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) { logisticsState.activeOrderModal = null; renderLogisticsApp(); } });
 
   document.querySelectorAll('.status-update-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -390,8 +426,7 @@ const attachAppEvents = () => {
       const orderId = btnEl.dataset.id;
       const newStatus = btnEl.dataset.status;
 
-      // Prevent re-updating current or past statuses
-      const order = partnerState.orders.find(o => o._id === orderId);
+      const order = logisticsState.orders.find(o => o._id === orderId);
       const steps = ['Order Received', 'Washing', 'Ironing', 'Ready for Pickup', 'Completed'];
       if (steps.indexOf(newStatus) <= steps.indexOf(order.status)) return;
 
@@ -399,9 +434,20 @@ const attachAppEvents = () => {
       btnEl.innerHTML = '<span style="margin: 0 auto;">Syncing...</span>';
 
       try {
-        await api.updateOrderStatus(orderId, newStatus);
-        partnerState.orders = await api.getPartnerOrders(partnerState.user.mobile);
-        renderPartnerApp();
+        const res = await api.updateOrderStatus(orderId, newStatus);
+
+        // Update local status so tracking logic uses correct status
+        order.status = res.status;
+
+        // Start tracking if status is Order Received or Out for Delivery (Ready for Pickup)
+        if (newStatus === 'Order Received' || newStatus === 'Ready for Pickup') {
+          startLocationTracking(orderId);
+        } else if (newStatus === 'Completed' || newStatus === 'Cancelled') {
+          stopLocationTracking();
+        }
+
+        logisticsState.orders = await api.getPartnerOrders(logisticsState.user.mobile);
+        renderLogisticsApp();
       } catch (err) {
         alert('Update Broadcast Failed: ' + err.message);
         btnEl.innerHTML = originalHtml;
@@ -410,4 +456,4 @@ const attachAppEvents = () => {
   });
 };
 
-renderPartnerApp();
+renderLogisticsApp();

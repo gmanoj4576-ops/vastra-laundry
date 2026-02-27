@@ -18,10 +18,25 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Get User Orders
-router.get('/:email', async (req, res) => {
+// Get User Orders (Identifier can be Email or Mobile)
+router.get('/:identifier', async (req, res) => {
     try {
-        const orders = await Order.find({ userEmail: req.params.email }).sort({ createdAt: -1 });
+        const identifier = req.params.identifier;
+        const query = {
+            $or: [
+                { userEmail: identifier },
+                { userMobile: identifier }
+            ]
+        };
+
+        // Also check with +91 if it's 10 digits
+        if (/^\d{10}$/.test(identifier)) {
+            query.$or.push({ userMobile: `+91${identifier}` });
+        } else if (/^\+91\d{10}$/.test(identifier)) {
+            query.$or.push({ userMobile: identifier.replace('+91', '') });
+        }
+
+        const orders = await Order.find(query).sort({ createdAt: -1 });
         res.json(orders);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -38,13 +53,32 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Bulk Assign Orders (Admin)
+router.put('/bulk/assign', async (req, res) => {
+    console.log('📦 Bulk Assign Request:', req.body.orderIds?.length, 'orders for agent', req.body.partnerId);
+    try {
+        const { orderIds, partnerId } = req.body;
+        if (!orderIds || !Array.isArray(orderIds) || !partnerId) {
+            return res.status(400).json({ message: 'Invalid request data' });
+        }
+        const result = await Order.updateMany(
+            { _id: { $in: orderIds } },
+            { assignedPartner: partnerId, deliveryAgent: partnerId, status: 'Assigned' }
+        );
+        res.json({ message: 'Orders assigned successfully', result });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Assign Order to Partner (Admin)
 router.put('/:id/assign', async (req, res) => {
+    console.log('📦 Single Assign Request for ID:', req.params.id, 'to agent', req.body.partnerId);
     try {
-        const { partnerId, partnerPayout } = req.body;
+        const { partnerId } = req.body;
         const order = await Order.findByIdAndUpdate(
             req.params.id,
-            { assignedPartner: partnerId, deliveryAgent: partnerId, partnerPayout, status: 'Assigned' },
+            { assignedPartner: partnerId, deliveryAgent: partnerId, status: 'Assigned' },
             { new: true }
         );
         res.json(order);

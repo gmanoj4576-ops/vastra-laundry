@@ -37,10 +37,11 @@ export function renderProfile(user, orders, onLogout) {
         ${ext.savedAddresses.map(addr => `
             <div style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05);">
                 <div style="font-size: 1.5rem;">${addr.type === 'Home' ? '🏠' : '🏢'}</div>
-                <div>
+                <div style="flex: 1;">
                     <h4 style="margin:0;">${addr.type}</h4>
                     <p style="margin:0; font-size: 0.85rem; color: #64748b;">${addr.text}</p>
                 </div>
+                <button class="edit-address-btn text-btn" data-id="${addr.id}" style="font-size: 0.75rem; color: #3b82f6;">Edit</button>
             </div>
         `).join('')}
       </div>
@@ -64,14 +65,14 @@ export function renderProfile(user, orders, onLogout) {
             ${orders.map(order => `
               <div class="history-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #f1f5f9;">
                 <div>
-                  <h4 style="margin:0">#${order.id}</h4>
+                  <h4 style="margin:0">#${(order._id || order.id || 'N/A').toString().slice(-6).toUpperCase()}</h4>
                   <p style="margin:0; font-size: 0.8rem; color: #64748b;">${order.date} • ${order.items.length} items</p>
                 </div>
                 <div style="text-align: right;">
                   <span style="display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 700; background: #dcfce7; color: #166534; margin-bottom: 0.5rem;">${order.status}</span>
                   <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                      <button class="invoice-btn text-btn" onclick="alert('Downloading invoice...')" style="font-size: 0.75rem; border: 1px solid currentColor; margin: 0; padding: 0.3rem 1rem;">Invoice</button>
-                     <button class="reorder-btn text-btn" data-id="${order.id}" style="font-size: 0.75rem; color: #6366f1; border: 1px solid currentColor; margin: 0; padding: 0.3rem 1rem;">Buy Again</button>
+                     <button class="reorder-btn text-btn" data-id="${order._id || order.id}" style="font-size: 0.75rem; color: #6366f1; border: 1px solid currentColor; margin: 0; padding: 0.3rem 1rem;">Buy Again</button>
                   </div>
                 </div>
               </div>
@@ -87,6 +88,46 @@ export function renderProfile(user, orders, onLogout) {
       <button class="fab-chat" onclick="alert('Chat with Support Connected! 🎧')" style="position: fixed; bottom: 2rem; right: 2rem; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; font-size: 1.5rem; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)'" onmouseout="this.style.transform='scale(1) translateY(0)'">
         💬
       </button>
+
+      <!-- Address Edit Modal -->
+      <div id="addr-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; opacity: 0; transition: opacity 0.3s; align-items: center; justify-content: center;">
+        <div id="addr-modal" class="glass-card" style="width: 90%; max-width: 450px; background: white; border-radius: 20px; padding: 2rem; transform: translateY(20px); transition: all 0.3s;">
+            <h3 id="addr-modal-title" style="margin-top: 0; margin-bottom: 1.5rem;">Edit Address</h3>
+            <input type="hidden" id="edit-addr-id">
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem;">Category (e.g. Home, Office)</label>
+                <input type="text" id="edit-addr-type" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+            </div>
+
+            <div style="margin-bottom: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem;">Door Number</label>
+                    <input type="text" id="edit-addr-door" placeholder="Ext: 4B" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+                </div>
+                <div>
+                     <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem;">Street Name</label>
+                     <input type="text" id="edit-addr-street" placeholder="Street Name" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem;">Village/Area</label>
+                    <input type="text" id="edit-addr-village" placeholder="Village" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+                </div>
+                <div>
+                     <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem;">City</label>
+                     <input type="text" id="edit-addr-city" placeholder="City" style="width: 100%; padding: 0.8rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="close-addr-modal" class="auth-btn" style="background: #f1f5f9; color: #64748b; margin-top: 0; box-shadow: none;">Cancel</button>
+                <button id="save-addr-btn" class="auth-btn" style="background: var(--primary-gradient); margin-top: 0;">Save Address</button>
+            </div>
+        </div>
+      </div>
     </div>
   `;
 

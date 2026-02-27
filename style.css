@@ -147,14 +147,14 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 9999;
+    background: white;
+    z-index: 10000;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    animation: fadeIn 0.5s ease-out;
+    transition: opacity 0.5s ease-out;
 }
 
 .washing-machine-loader {
@@ -170,11 +170,11 @@ button {
 .machine-body {
     width: 120px;
     height: 150px;
-    background: #f1f5f9;
-    border: 4px solid #cbd5e1;
+    background: #f8fafc;
+    border: 6px solid #e2e8f0;
     border-radius: 20px;
     position: relative;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -182,11 +182,10 @@ button {
 }
 
 .machine-body::before {
-    /* Controls */
     content: '';
     position: absolute;
-    top: 10px;
-    right: 15px;
+    top: 15px;
+    right: 20px;
     width: 10px;
     height: 10px;
     background: #ef4444;
@@ -195,24 +194,25 @@ button {
 }
 
 .door {
-    width: 90px;
-    height: 90px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     border: 8px solid #cbd5e1;
-    background: rgba(255, 255, 255, 0.8);
+    background: #f1f5f9;
     position: relative;
     overflow: hidden;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 .water {
     position: absolute;
-    bottom: 0;
+    bottom: -15%;
     left: 0;
     width: 100%;
-    height: 40%;
-    background: rgba(59, 130, 246, 0.4);
-    animation: slosh 2s infinite ease-in-out;
+    height: 60%;
+    background: linear-gradient(to bottom, rgba(59, 130, 246, 0.5), rgba(37, 99, 235, 0.8));
+    animation: slosh 1.5s infinite ease-in-out;
+    border-radius: 30% 30% 0 0;
 }
 
 .clothes {
@@ -220,59 +220,67 @@ button {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 1.5rem;
-    animation: tumble 1s infinite linear;
+    font-size: 2rem;
+    animation: tumble 1.2s infinite linear;
+    z-index: 3;
 }
 
 .person {
     position: absolute;
-    right: -20px;
-    bottom: 0;
-    font-size: 4rem;
+    right: -30px;
+    bottom: -10px;
+    font-size: 4.5rem;
     z-index: 3;
-    animation: feedMachine 3s infinite ease-in-out;
+    animation: bounce 2s infinite ease-in-out;
 }
 
 @keyframes slosh {
 
     0%,
     100% {
-        height: 40%;
-        transform: rotate(0deg);
+        transform: translateY(0) rotate(-2deg);
     }
 
     50% {
-        height: 50%;
-        transform: rotate(5deg);
+        transform: translateY(-5px) rotate(2deg);
     }
 }
 
 @keyframes tumble {
-    100% {
+    from {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    to {
         transform: translate(-50%, -50%) rotate(360deg);
     }
 }
 
-@keyframes feedMachine {
+@keyframes bounce {
 
     0%,
     100% {
-        transform: translateX(0) rotate(0deg);
+        transform: translateY(0);
     }
 
     50% {
-        transform: translateX(-10px) rotate(-10deg);
+        transform: translateY(-10px);
     }
 }
 
 .loading-overlay h2 {
-    font-size: 1.8rem;
-    color: #3b82f6;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
 }
 
 .loading-overlay p {
     color: #64748b;
+    font-size: 1.1rem;
 }
 
 /* --- AUTH STYLES --- */

@@ -8,10 +8,26 @@
   <meta name="theme-color" content="#4f46e5">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Vastra Laundry</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 
 <body>
   <div class="live-animated-bg"></div>
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="washing-machine-loader">
+      <div class="machine-body">
+        <div class="door">
+          <div class="water"></div>
+          <div class="clothes">👕</div>
+        </div>
+      </div>
+      <div class="person">🧺</div>
+    </div>
+    <h2>Vastra is Washing...</h2>
+    <p>Preparing your premium experience</p>
+  </div>
+
   <div id="app"></div>
   <div style="text-align: center; padding: 10px; font-size: 0.8rem; color: #ccc;">v3.4 - Pro Connection</div>
   <script type="module" src="/main.js"></script>

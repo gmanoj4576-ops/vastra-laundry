@@ -78,13 +78,23 @@ export const api = {
     },
 
     // Partner/Admin Actions
-    async assignOrder(orderId, partnerId, partnerPayout) {
+    async assignOrder(orderId, partnerId) {
         const res = await fetch(`${API_URL}/orders/${orderId}/assign`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ partnerId, partnerPayout })
+            body: JSON.stringify({ partnerId })
         });
         if (!res.ok) throw new Error('Failed to assign order');
+        return res.json();
+    },
+
+    async bulkAssignOrders(orderIds, partnerId) {
+        const res = await fetch(`${API_URL}/orders/bulk/assign`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderIds, partnerId })
+        });
+        if (!res.ok) throw new Error('Failed to assign orders in bulk');
         return res.json();
     },
 
@@ -177,5 +187,25 @@ export const api = {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         return data;
+    },
+
+    async updateProfile(userId, updateData) {
+        if (!userId) throw new Error('User ID is required for profile update');
+        const res = await fetch(`${API_URL}/auth/profile/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Update failed');
+            return data;
+        } else {
+            const text = await res.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Server returned an invalid response. Please try again later.');
+        }
     }
 };

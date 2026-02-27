@@ -177,4 +177,31 @@ router.post('/social-login', async (req, res) => {
     }
 });
 
+// Update User Profile (Self)
+router.put('/profile/:id', async (req, res) => {
+    try {
+        const { walletBalance, vastraCoins, lastCheckinDate, savedAddresses, notifications } = req.body;
+        const updateData = {};
+        if (walletBalance !== undefined) updateData.walletBalance = walletBalance;
+        if (vastraCoins !== undefined) updateData.vastraCoins = vastraCoins;
+        if (lastCheckinDate !== undefined) updateData.lastCheckinDate = lastCheckinDate;
+        if (savedAddresses !== undefined) updateData.savedAddresses = savedAddresses;
+        if (notifications !== undefined) updateData.notifications = notifications;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({ message: 'Profile updated successfully', user: updatedUser });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 export default router;

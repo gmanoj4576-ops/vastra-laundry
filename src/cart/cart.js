@@ -21,10 +21,10 @@ export function renderCart(cartItems, onCheckout, onBack) {
             <div class="cart-item" style="display: flex; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid #f1f5f9;">
               <div>
                 <h4 style="margin:0">${item.itemName}</h4>
-                <p style="margin:0; font-size: 0.8rem; color: #64748b;">${item.serviceName} • $${item.price} x ${item.quantity}</p>
+                <p style="margin:0; font-size: 0.8rem; color: #64748b;">${item.serviceName} • ₹${item.price} x ${item.quantity}</p>
               </div>
               <div style="display: flex; align-items: center; gap: 1rem;">
-                <span style="font-weight: 700;">$${(item.price * item.quantity).toFixed(2)}</span>
+                <span style="font-weight: 700;">₹${(item.price * item.quantity).toFixed(2)}</span>
                 <button class="remove-item" data-index="${index}" style="color: #ef4444; background: none; font-size: 1.2rem;">✕</button>
               </div>
             </div>
@@ -42,19 +42,19 @@ export function renderCart(cartItems, onCheckout, onBack) {
         <div class="cart-summary" style="margin-top: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 12px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
             <span>Subtotal</span>
-            <span id="subtotal-display">$${total.toFixed(2)}</span>
+            <span id="subtotal-display">₹${total.toFixed(2)}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
             <span>Service Fee</span>
-            <span>$2.00</span>
+            <span>₹2.00</span>
           </div>
           <div id="discount-row" style="display: none; justify-content: space-between; margin-bottom: 0.5rem; color: #16a34a;">
             <span>Discount</span>
-            <span id="discount-display">-$0.00</span>
+            <span id="discount-display">-₹0.00</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px dashed #e2e8f0; font-weight: 800; font-size: 1.2rem;">
             <span>Total</span>
-            <span id="total-display">$${(total + 2).toFixed(2)}</span>
+            <span id="total-display">₹${(total + 2).toFixed(2)}</span>
           </div>
         </div>
 
