@@ -20,7 +20,8 @@ const UserSchema = new mongoose.Schema({
     }],
     dailyEarnings: { type: Number, default: 0 }, // For logistics/partners
     partnerStatus: { type: String, enum: ['active', 'inactive'], default: 'active' },
-    logisticsStatus: { type: String, enum: ['active', 'inactive'], default: 'active' }
+    logisticsStatus: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    area: { type: String, default: 'General' } // Assigned area for logistics agents
 }, { timestamps: true });
 
 export default mongoose.model('User', UserSchema);

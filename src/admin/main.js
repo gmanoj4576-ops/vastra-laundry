@@ -3,8 +3,8 @@ import { api } from '../api.js';
 
 const adminState = {
   user: null,
-  view: 'dashboard', // 'dashboard', 'users', 'finance'
-  authMode: 'login', // 'login' or 'signup'
+  view: 'dashboard', // dashboard, users, finance, logistics, past-orders
+  authMode: 'login', // login or signup
   orders: [],
   partners: [],
   users: [],
@@ -12,7 +12,8 @@ const adminState = {
   selectedUser: null,
   selectedOrderIds: [], // For bulk selection
   showRegisterModal: false,
-  userTab: 'customers' // 'customers' or 'logistics'
+  userTab: 'all', // all, customers, logistics, admins
+  sidebarOpen: false
 };
 
 // --- Custom Theme ---
@@ -108,23 +109,23 @@ const themeStyles = `
     }
     .toast.show { transform: translateY(0); }
     
-    /* Autofill Fix for Dark Mode */
+    /* Autofill and Typing Fix for Dark Mode */
     input:-webkit-autofill,
     input:-webkit-autofill:hover, 
     input:-webkit-autofill:focus {
-      -webkit-text-fill-color: var(--text-main) !important;
+      -webkit-text-fill-color: white !important;
       -webkit-box-shadow: 0 0 0px 1000px #0f172a inset !important;
       transition: background-color 5000s ease-in-out 0s;
-      color: white !important;
-      background-color: #0f172a !important;
+      caret-color: white !important;
     }
     
     input {
       color: white !important;
       background-color: #0f172a !important;
+      caret-color: white !important;
     }
     
-    input::placeholder { color: rgba(255,255,255,0.3) !important; }
+    input::placeholder { color: rgba(255,255,255,0.4) !important; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
@@ -210,7 +211,7 @@ const renderAuth = () => {
             <input type="password" id="admin-password" placeholder="••••••••" required class="dark-input" style="font-size: 16px;">
           </div>
           
-          <button type="submit" class="dark-btn" style="margin-top: 10px; font-size: 15px; height: 50px;">
+          <button type="submit" class="dark-btn" id="auth-submit-btn" style="margin-top: 10px; font-size: 15px; height: 50px;">
             AUTHENTICATE OVERRIDE
           </button>
         </form>
@@ -267,7 +268,6 @@ const renderTrackingModal = () => {
                 ${assignedAgent ? `
                     <div style="color: white; font-weight: 700; font-size: 16px;">${assignedAgent.name}</div>
                     <div style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">📞 ${assignedAgent.mobile}</div>
-                    <div style="color: var(--warning); font-weight: bold; margin-top: 10px; font-size: 14px; background: rgba(245,158,11,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block;">Payout: ₹${order.partnerPayout || 0}</div>
                 ` : `<div style="color: var(--danger); font-weight: bold; margin-top: 10px; display: flex; align-items: center; gap: 8px;">
                       <span style="display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:50%; animate: pulse 1s infinite;"></span>
                       UNASSIGNED
@@ -347,6 +347,11 @@ const renderEditUserModal = () => {
                <label style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">Direct Wallet Override (₹)</label>
                <input type="number" id="edit-wallet" value="${user.walletBalance || 0}" class="dark-input" style="background: #0f172a; margin-top: 5px; font-size: 18px; font-weight: bold; color: var(--success);">
             </div>
+
+            <div>
+              <label style="color: var(--text-muted); font-size: 12px;">Assigned Area (Logistics Only)</label>
+              <input type="text" id="edit-area" value="${user.area || 'General'}" class="dark-input">
+            </div>
   
             <button type="submit" class="dark-btn" style="margin-top: 15px;">Save Master Override</button>
           </form>
@@ -374,6 +379,7 @@ const renderRegisterModal = () => {
             <input type="text" id="reg-mobile" placeholder="Mobile Number" required class="dark-input">
             <input type="email" id="reg-email" placeholder="Email Address (Optional)" class="dark-input">
             <input type="password" id="reg-password" placeholder="Password Assignment" required class="dark-input">
+            <input type="text" id="reg-area" placeholder="Assigned Area (Logistics Only)" class="dark-input" value="General">
             
             <button type="submit" class="dark-btn success" style="margin-top: 15px;">Execute Deployment</button>
           </form>
@@ -406,6 +412,9 @@ const renderSidebar = () => {
             <a href="#" class="sidebar-link ${adminState.view === 'logistics' ? 'active' : ''}" data-view="logistics" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
               <span style="font-size: 16px;">🛵</span> Logistics Core
             </a>
+            <a href="#" class="sidebar-link ${adminState.view === 'past-orders' ? 'active' : ''}" data-view="past-orders" style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
+              <span style="font-size: 16px;">📜</span> Past Orders
+            </a>
         </nav>
         <div style="padding: 24px; border-top: 1px solid var(--border);">
             <button id="admin-logout-btn" style="width: 100%; padding: 12px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;">Secure Logout</button>
@@ -432,12 +441,13 @@ const renderTopBar = () => {
 }
 
 const renderDashboardView = () => {
+  const activeOrders = adminState.orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled');
   return `
       <div style="padding: 20px;" class="animate-fade-in">
         <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
            <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 15px;">
-              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Total Orders</div>
-              <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.length}</div>
+              <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Active Orders</div>
+              <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${activeOrders.length}</div>
            </div>
            <div class="dark-card" style="border-left: 4px solid var(--warning); padding: 15px;">
               <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Pending Actions</div>
@@ -456,8 +466,7 @@ const renderDashboardView = () => {
                     <select id="bulk-partner-id" class="dark-input" style="padding: 6px; font-size: 11px; width: 160px;">
                         <option value="">-- Bulk Assign Agent --</option>
                         ${adminState.partners.map(p => {
-    const areas = p.savedAddresses?.map(a => a.text).join(', ') || 'Global';
-    return `<option value="${p.mobile}">${p.name} [${p.mobile}] (${areas})</option>`;
+    return `<option value="${p.mobile}">${p.name} (${p.area || 'General'})</option>`;
   }).join('')}
                     </select>
                     <button id="bulk-assign-btn" class="dark-btn" style="padding: 6px 12px; width: auto; font-size: 11px;">Assign Selected</button>
@@ -469,7 +478,7 @@ const renderDashboardView = () => {
                 <table style="width: 100%;">
                     <thead>
                         <tr>
-                            <th style="width: 40px;"><input type="checkbox" id="select-all-orders" ${adminState.selectedOrderIds.length === adminState.orders.length && adminState.orders.length > 0 ? 'checked' : ''}></th>
+                            <th style="width: 40px;"><input type="checkbox" id="select-all-orders" ${adminState.selectedOrderIds.length === activeOrders.length && activeOrders.length > 0 ? 'checked' : ''}></th>
                             <th>Order Target</th>
                             <th>Address / Area</th>
                             <th>Status Vector</th>
@@ -477,7 +486,7 @@ const renderDashboardView = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        ${adminState.orders
+                        ${activeOrders
         .sort((a, b) => {
           const statusOrder = { 'Pending': 0, 'Order Received': 0, 'Assigned': 1, 'Processing': 1, 'Washing': 1, 'Ironing': 1, 'Out for Delivery': 1, 'Completed': 2, 'Cancelled': 2 };
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
@@ -505,8 +514,7 @@ const renderDashboardView = () => {
                                           <select id="partner-id-${order._id}" class="dark-input" style="padding: 6px; font-size: 11px; width: 160px;">
                                             <option value="">-- Target Fleet --</option>
                                             ${adminState.partners.map(p => {
-          const areas = p.savedAddresses?.map(a => a.text).join(', ') || 'Global';
-          return `<option value="${p.mobile}">${p.name} [${p.mobile}] (${areas})</option>`;
+          return `<option value="${p.mobile}">${p.name} [${p.mobile}] (${p.area || "General"})</option>`;
         }).join('')}
                                           </select>
                                           <button class="dark-btn assign-btn" data-id="${order._id}" style="padding: 6px 10px; font-size: 12px; width: auto;">Lock</button>
@@ -586,74 +594,44 @@ const renderLogisticsView = () => {
 
   return `
        <div style="padding: 20px;" class="animate-fade-in">
-          <div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px;">
-             <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 15px;">
-                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Fleet Size</div>
-                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${partners.length} Agents</div>
-             </div>
-             <div class="dark-card" style="border-left: 4px solid var(--success); padding: 15px;">
-                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Active Deployments</div>
-                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => o.assignedPartner).length}</div>
-             </div>
-             <div class="dark-card" style="border-left: 4px solid var(--danger); padding: 15px;">
-                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; font-weight: bold;">Unassigned</div>
-                <div style="font-size: 24px; font-weight: 800; color: white; margin-top: 5px;">${adminState.orders.filter(o => !o.assignedPartner && o.status !== 'Completed').length}</div>
+          <div class="stats-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 25px;">
+             <div class="dark-card" style="border-left: 4px solid var(--accent); padding: 20px; text-align: center;">
+                <div style="color: var(--text-muted); text-transform: uppercase; font-size: 12px; font-weight: bold; letter-spacing: 1px;">Logistics Fleet Command</div>
+                <div style="font-size: 32px; font-weight: 800; color: white; margin-top: 10px;">${partners.length} Registered Agents</div>
              </div>
           </div>
 
-          <div class="dark-card" style="padding: 0; overflow: hidden;">
-              <div style="padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0f172a;">
-                  <h3 style="margin: 0; font-size: 15px;">Logistics Fleet Personnel</h3>
-              </div>
-              <div style="padding: 10px;">
-                  ${partners.length === 0 ? '<div style="padding: 40px; text-align: center; color: var(--text-muted);">No fleet agents registered.</div>' : partners.map(p => {
-    const agentOrders = adminState.orders.filter(o => o.assignedPartner === p.mobile);
-    const hasOrders = agentOrders.length > 0;
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+              ${partners.length === 0 ? '<div class="dark-card" style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No fleet agents found.</div>' : partners.map(p => {
+    const agentOrders = adminState.orders.filter(o => (o.assignedPartner === p.mobile || o.deliveryAgent === p.mobile) && o.status !== 'Completed' && o.status !== 'Cancelled');
     return `
-                      <div class="dark-card" style="margin-bottom: 10px; padding: 0; border: 1px solid ${hasOrders ? 'var(--accent)' : 'var(--border)'};">
-                          <div style="padding: 15px; display: flex; justify-content: space-between; align-items: center;">
-                              <div>
-                                  <div style="font-weight: bold; color: white; font-size: 15px;">${p.name}</div>
-                                  <div style="color: var(--text-muted); font-size: 12px;">Mobile: ${p.mobile}</div>
-                              </div>
-                              <div style="text-align: right;">
-                                  <div style="color: ${hasOrders ? 'var(--accent)' : 'var(--text-muted)'}; font-weight: 800; font-size: 18px;">${agentOrders.length}</div>
-                                  <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Orders Assigned</div>
-                              </div>
+                  <div class="dark-card" style="padding: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border);">
+                      <div style="padding: 20px; border-bottom: 1px solid var(--border); background: rgba(59,130,246,0.05);">
+                          <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 4px;">${p.name}</div>
+                          <div style="display: flex; flex-direction: column; gap: 4px;">
+                              <div style="font-size: 12px; color: var(--text-muted);">Mobile: ${p.mobile}</div>
+                              <div style="font-size: 12px; color: var(--accent); font-weight: bold;">Area: ${p.area || 'General Area'}</div>
                           </div>
-                          ${hasOrders ? `
-                              <div style="background: rgba(15, 23, 42, 0.5); border-top: 1px solid var(--border); padding: 10px;">
-                                  <table style="width: 100%; font-size: 12px;">
-                                      <thead>
-                                          <tr style="color: var(--text-muted); border-bottom: 1px solid var(--border);">
-                                              <th style="text-align: left; padding: 5px;">Target</th>
-                                              <th style="text-align: left; padding: 5px;">Status</th>
-                                              <th style="text-align: right; padding: 5px;">Action</th>
-                                          </tr>
-                                      </thead>
-                                      <tbody>
-                                          ${agentOrders.map(o => `
-                                              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                                  <td style="padding: 8px 5px;">
-                                                      <div style="color: white; font-weight: 600;">${o.userEmail || o.userMobile}</div>
-                                                      <div style="font-size: 10px; opacity: 0.6;">${o._id.substring(o._id.length - 8)}</div>
-                                                  </td>
-                                                  <td style="padding: 8px 5px;">
-                                                      <span class="status-pill ${o.status === 'Completed' ? 'status-completed' : 'status-assigned'}">${o.status}</span>
-                                                  </td>
-                                                  <td style="padding: 8px 5px; text-align: right;">
-                                                      <button class="dark-btn order-row" data-id="${o._id}" style="padding: 4px 8px; font-size: 10px; width: auto;">Details</button>
-                                                  </td>
-                                              </tr>
-                                          `).join('')}
-                                      </tbody>
-                                  </table>
-                              </div>
-                          ` : ''}
                       </div>
-                    `;
+                      <div style="flex: 1; padding: 15px; overflow-y: auto; max-height: 250px;">
+                          <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Active Assignments (${agentOrders.length})</div>
+                          ${agentOrders.length === 0 ? '<div style="font-size: 12px; color: #475569; font-style: italic;">No active assignments.</div>' : `
+                              <div style="display: flex; flex-direction: column; gap: 8px;">
+                                  ${agentOrders.map(o => `
+                                      <div class="order-row clickable" data-id="${o._id}" style="padding: 10px; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); width: 100%; box-sizing: border-box;">
+                                          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                              <div style="font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${o.userMobile}</div>
+                                              <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(59,130,246,0.1); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); white-space: nowrap;">${o.status.toUpperCase()}</span>
+                                          </div>
+                                          <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">PK: ${o._id.substring(o._id.length - 8).toUpperCase()}</div>
+                                      </div>
+                                  `).join('')}
+                              </div>
+                          `}
+                      </div>
+                  </div>
+                `;
   }).join('')}
-              </div>
           </div>
        </div>
     `;
@@ -713,6 +691,62 @@ const renderFinanceView = () => {
     `;
 };
 
+const renderPastOrdersView = () => {
+  const pastOrders = adminState.orders.filter(o => o.status === 'Completed' || o.status === 'Cancelled');
+
+  return `
+        <div style="padding: 20px;" class="animate-fade-in">
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px;">
+                <div class="dark-card" style="border-left: 4px solid var(--success); padding: 15px;">
+                    <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Completed Total</div>
+                    <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${pastOrders.filter(o => o.status === 'Completed').length}</div>
+                </div>
+                <div class="dark-card" style="border-left: 4px solid var(--danger); padding: 15px;">
+                    <div style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; font-weight: bold;">Cancelled Total</div>
+                    <div style="font-size: 28px; font-weight: 800; color: white; margin-top: 5px;">${pastOrders.filter(o => o.status === 'Cancelled').length}</div>
+                </div>
+            </div>
+
+            <div class="dark-card" style="padding: 0; overflow: hidden;">
+                <div style="padding: 15px 20px; border-bottom: 1px solid var(--border); background: #0f172a;">
+                    <h3 style="margin: 0; font-size: 15px;">Historical Order Ledger</h3>
+                </div>
+                <div class="responsive-table-container">
+                    ${pastOrders.length === 0 ? '<div style="padding: 40px; text-align: center; color: var(--text-muted);">Archive is currently empty.</div>' : `
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Target Intel</th>
+                                    <th>Final Status</th>
+                                    <th>Revenue</th>
+                                    <th>Agent Involved</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pastOrders.map(o => `
+                                    <tr class="clickable order-row" data-id="${o._id}">
+                                        <td>
+                                            <div style="font-weight: bold; color: white;">${o.userMobile}</div>
+                                            <div style="font-size: 11px; color: var(--text-muted);">ID: ${o._id.substring(o._id.length - 8)}</div>
+                                        </td>
+                                        <td>
+                                            <span style="background: ${o.status === 'Completed' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color: ${o.status === 'Completed' ? '#34d399' : '#f87171'}; border: 1px solid ${o.status === 'Completed' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold;">${o.status.toUpperCase()}</span>
+                                        </td>
+                                        <td style="color: var(--success); font-weight: bold;">₹${o.totalAmount || 0}</td>
+                                        <td>${adminState.partners.find(p => p.mobile === o.assignedPartner || p.mobile === o.deliveryAgent)?.name || o.assignedPartner || 'N/A'}</td>
+                                        <td style="font-size: 11px; color: var(--text-muted);">${new Date(o.updatedAt).toLocaleDateString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+};
+
 // --- Main App Renderer ---
 const renderApp = () => {
   const root = document.querySelector('#admin-app');
@@ -733,7 +767,8 @@ const renderApp = () => {
               ${adminState.view === 'dashboard' ? renderDashboardView() :
       adminState.view === 'users' ? renderUsersView() :
         adminState.view === 'finance' ? renderFinanceView() :
-          renderLogisticsView()
+          adminState.view === 'past-orders' ? renderPastOrdersView() :
+            renderLogisticsView()
     }
           </div>
         </div>
@@ -869,8 +904,9 @@ const attachAppEvents = () => {
 
   // Bulk Selection Logic
   document.getElementById('select-all-orders')?.addEventListener('change', (e) => {
+    const activeOrders = adminState.orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled');
     if (e.target.checked) {
-      adminState.selectedOrderIds = adminState.orders.map(o => o._id);
+      adminState.selectedOrderIds = activeOrders.map(o => o._id);
     } else {
       adminState.selectedOrderIds = [];
     }
@@ -969,14 +1005,15 @@ const attachAppEvents = () => {
 
     try {
       // Update Details
-      await api.adminUpdateUser(user._id, { name, mobile });
+      const area = document.getElementById('edit-area').value;
+      await api.adminUpdateUser(user._id, { name, mobile, area });
       // Update Wallet
       await api.adminUpdateWallet(user._id, newWallet);
 
       // Local Update for immediate feedback
       const uIndex = adminState.users.findIndex(u => u._id === user._id);
       if (uIndex !== -1) {
-        adminState.users[uIndex] = { ...adminState.users[uIndex], name, mobile, walletBalance: newWallet };
+        adminState.users[uIndex] = { ...adminState.users[uIndex], name, mobile, area, walletBalance: newWallet };
       }
 
       showToast("MASTER OVERRIDE SUCCESSFUL");
@@ -1013,12 +1050,13 @@ const attachAppEvents = () => {
     const mobile = document.getElementById('reg-mobile').value;
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
+    const area = document.getElementById('reg-area').value;
 
     btn.innerText = 'DEPLOYING...';
     btn.disabled = true;
 
     try {
-      await api.adminRegisterUser({ name, mobile, email, password, role });
+      await api.adminRegisterUser({ name, mobile, email, password, role, area });
       adminState.showRegisterModal = false;
       await parallelFetchData();
       renderApp();
