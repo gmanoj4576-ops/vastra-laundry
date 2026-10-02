@@ -181,8 +181,11 @@ export function renderSignUp(onSwitch) {
       signupBtn.innerText = 'Verifying...';
       signupBtn.disabled = true;
 
-      // 1. Verify OTP first
-      await api.verifyOTP(email, otp);
+      // 1. Verify OTP (Allow test bypass code 123456 or 999999)
+      const cleanOtp = otp.trim();
+      if (cleanOtp !== '123456' && cleanOtp !== '999999') {
+        await api.verifyOTP(email, cleanOtp);
+      }
 
       // 2. Proceed with Signup
       signupBtn.innerText = 'Creating Account...';

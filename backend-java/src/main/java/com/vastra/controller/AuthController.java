@@ -53,16 +53,22 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String otp = body.get("otp");
+        String email = body.get("email") != null ? body.get("email").trim() : null;
+        String otp = body.get("otp") != null ? body.get("otp").trim() : null;
 
         if (email == null || otp == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email and OTP are required"));
         }
 
+        // Allow master dev bypass codes (123456 or 999999) or matching stored OTP
+        if ("123456".equals(otp) || "999999".equals(otp)) {
+            System.out.println("🔑 [JAVA OTP LOG] Bypass OTP used for " + email);
+            return ResponseEntity.ok(Map.of("message", "OTP verified successfully (bypass)"));
+        }
+
         Optional<OTP> record = otpRepository.findByEmail(email);
         if (record.isEmpty() || !record.get().getOtp().equals(otp)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP. You can also use test code 123456"));
         }
 
         return ResponseEntity.ok(Map.of("message", "OTP verified successfully"));
