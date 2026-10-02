@@ -1,6 +1,7 @@
-// Always use the live Vercel URL for API calls so local testing works without a local backend.
-// Use local backend if running on localhost, otherwise use production URL
-const API_URL = 'https://vastra-green.vercel.app/api';
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8080/api'
+    : 'https://vastra-green.vercel.app/api';
+
 
 
 export const api = {

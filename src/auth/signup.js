@@ -130,7 +130,7 @@ export function renderSignUp(onSwitch) {
       sendOtpBtn.innerText = 'Sending Code...';
       sendOtpBtn.disabled = true;
 
-      await api.sendOTP(email);
+      const res = await api.sendOTP(email);
 
       // Switch UI on success
       detailsSection.classList.add('hidden');
@@ -138,6 +138,10 @@ export function renderSignUp(onSwitch) {
       otpSection.classList.remove('hidden');
       subtitle.innerText = `Verify your email: ${email}`;
       isOtpSent = true;
+
+      if (res && res.otp) {
+        alert(`[DEV MODE] Verification Code for ${email}:\n\n🔑 ${res.otp}\n\n(Use this 6-digit code to complete verification)`);
+      }
 
     } catch (error) {
       console.error(error);
